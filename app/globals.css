@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+/* ZeusBot — design tokens (per design-spec.md §1.1) */
+
+:root {
+  /* Surfaces — cathedral firelight */
+  --ink-deep:    #190c0c;
+  --ink-warm:    #312f2a;
+  --bronze-deep: #3f3d34;
+  --olive-storm: #524b3c;
+
+  /* Text — bronzed legibility */
+  --bronze-mid:  #7e6548;
+  --bronze-up:   #9c7650;
+  --tan:         #b68a5e;
+  --sand:        #daae7f;
+
+  /* Single accent — divine fire */
+  --gold-orb:    #ffce6f;
+  --gold-warm:   #ffb347;
+
+  /* Robe accent — sparingly */
+  --crimson:     #6b2218;
+  --ember:       #823a23;
+
+  /* Hairlines */
+  --hairline:    rgba(218, 174, 127, 0.12);
+  --hairline-up: rgba(218, 174, 127, 0.24);
+
+  /* Elevation */
+  --elev-flat:   none;
+  --elev-raised: 0 1px 0 rgba(255, 206, 111, 0.04), 0 8px 32px rgba(0, 0, 0, 0.6);
+  --elev-orb:    0 0 0 1px rgba(255, 206, 111, 0.2), 0 0 80px rgba(255, 206, 111, 0.18);
+
+  /* Spacing — 7-step */
+  --space-2xs: 4px;
+  --space-xs:  8px;
+  --space-sm:  12px;
+  --space-md:  20px;
+  --space-lg:  32px;
+  --space-xl:  56px;
+  --space-2xl: 96px;
+
+  /* Type scale — 5 stops, fluid */
+  --display: clamp(48px, 6.5vw, 96px);
+  --h1:      clamp(36px, 4.5vw, 64px);
+  --h2:      clamp(24px, 2.6vw, 36px);
+  --body:    17px;
+  --caption: 14px;
+  --micro:   12px;
+
+  /* Motion */
+  --ease-out:  cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:   cubic-bezier(0.7, 0, 0.84, 0);
+  --dur-micro: 150ms;
+  --dur-soft:  340ms;
+  --dur-slow:  600ms;
+
+  /* Z-index */
+  --z-base:    0;
+  --z-pinned: 10;
+  --z-overlay: 50;
+  --z-modal:  100;
+
+  /* Page bg — animatable for hero unpin transition */
+  --page-bg: var(--ink-deep);
+}
+
+/* Tailwind v4 token bridge — exposes design tokens as utility classes
+   (bg-ink-deep, text-sand, border-hairline, etc.) */
+@theme inline {
+  --color-ink-deep:    var(--ink-deep);
+  --color-ink-warm:    var(--ink-warm);
+  --color-bronze-deep: var(--bronze-deep);
+  --color-olive-storm: var(--olive-storm);
+  --color-bronze-mid:  var(--bronze-mid);
+  --color-bronze-up:   var(--bronze-up);
+  --color-tan:         var(--tan);
+  --color-sand:        var(--sand);
+  --color-gold-orb:    var(--gold-orb);
+  --color-gold-warm:   var(--gold-warm);
+  --color-crimson:     var(--crimson);
+  --color-ember:       var(--ember);
+  --color-hairline:    var(--hairline);
+  --color-hairline-up: var(--hairline-up);
+
+  --font-display: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-sans:    var(--font-geist-sans);
+  --font-mono:    var(--font-geist-mono);
+}
+
+html,
+body {
+  background: var(--page-bg);
+  color: var(--sand);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: var(--body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--gold-orb);
+  color: var(--ink-deep);
+}
+
+/* Display heads — Instrument Serif italic */
+.font-display {
+  font-family: var(--font-instrument), ui-serif, Georgia, serif;
+  font-style: italic;
+  letter-spacing: -0.01em;
+}
+
+/* Mono uppercase eyebrow / micro label */
+.eyebrow {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: var(--micro);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bronze-up);
+  font-weight: 500;
+}
+
+/* Hairline divider */
+.hairline {
+  border-color: var(--hairline);
+}
+
+/* Focus rings — 2px gold-orb with 2px offset (per spec §5) */
+*:focus-visible {
+  outline: 2px solid var(--gold-orb);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Reduced motion — collapse all scroll/scrub/count-up/parallax to static */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

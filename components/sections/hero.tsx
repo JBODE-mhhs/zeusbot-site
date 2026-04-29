@@ -6,30 +6,32 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CONTACT_MAILTO } from "@/lib/constants";
+import { SCRIM_RECIPES } from "@/components/scroll/scrimRecipes";
 
 /**
- * Hero scene — v4 LCP-friendly markup. All B1-B4 overlays render
- * SSR-visible (no opacity-0 class) so the hero headline is the LCP
- * candidate at first paint. The "rise" reveal animates y-translate only
- * (reveal.ts §3); SnapRibbon's per-beat enter timeline drives the rise.
+ * Hero scene — v5 pin+scrub. All overlays SSR with opacity:1 and no inline
+ * transform; HeroPin attaches a scrub:true GSAP timeline that fires reveal
+ * tweens at scroll-progress thresholds (no autoplay, no immediateRender, no
+ * hydrate-flash class). See scroll-choreography.md §4.
  *
- * The cinematic frame backdrop is owned by SnapRibbon at z=0 (persistent
- * across all 11 beats) — this component renders TEXT ONLY over a
- * transparent surface, with text-shadow handling contrast against the
- * brightest pixel of the hero range (f01-f15).
+ * Scrim is `none` for hero (text uses text-shadow for contrast against the
+ * brightest hero frames f01–f15).
  */
-
 export function Hero() {
-
   return (
-    <div className="relative h-full w-full">
-      <div className="relative h-full max-w-[1280px] mx-auto px-6 lg:px-12 flex items-center">
+    <section
+      data-section="hero"
+      className="relative h-screen w-full overflow-hidden"
+    >
+      <div
+        data-scrim
+        aria-hidden
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{ background: SCRIM_RECIPES.hero }}
+      />
+      <div className="relative z-[2] h-full max-w-[1280px] mx-auto px-6 lg:px-12 flex items-center">
         <div className="max-w-[640px] grid gap-6 pt-32">
-          <span
-            data-beat="B1"
-            data-overlay="eyebrow"
-            className="eyebrow"
-          >
+          <span data-beat="B1" data-overlay="eyebrow" className="eyebrow">
             ZEUSBOT — A FLEET OF AGENTS
           </span>
 
@@ -42,32 +44,16 @@ export function Hero() {
               textShadow: "0 1px 16px rgba(25, 12, 12, 0.7)",
             }}
           >
-            <span
-              data-beat="B1"
-              data-overlay="line-1"
-              className="block"
-            >
+            <span data-beat="B1" data-overlay="line-1" className="block">
               Some problems
             </span>
-            <span
-              data-beat="B2"
-              data-overlay="line-2"
-              className="block"
-            >
+            <span data-beat="B2" data-overlay="line-2" className="block">
               take a <em>fleet</em>.
             </span>
-            <span
-              data-beat="B2"
-              data-overlay="line-3"
-              className="block"
-            >
+            <span data-beat="B2" data-overlay="line-3" className="block">
               We forge the agents
             </span>
-            <span
-              data-beat="B2"
-              data-overlay="line-4"
-              className="block"
-            >
+            <span data-beat="B2" data-overlay="line-4" className="block">
               that ship the work.
             </span>
           </h1>
@@ -133,6 +119,6 @@ export function Hero() {
           </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 }

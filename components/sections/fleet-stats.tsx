@@ -1,13 +1,6 @@
 import { StatBlock } from "@/components/stat-block";
+import { SCRIM_RECIPES } from "@/components/scroll/scrimRecipes";
 
-/**
- * Fleet stats — full-bleed bg of frame_mid.png, heavily darkened with a
- * left-to-right gradient (per design-spec.md §3.4).
- *
- * PLACEHOLDER VALUES — Bode confirms before public deploy. Per zeus
- * msg 1777420298763: ship as illustrative placeholders for v1, do NOT pull
- * live telemetry from zeus-default.db.
- */
 const STATS = [
   { value: "12", label: "Specialist agents in the fleet" },
   { value: "1,400+", label: "Tasks shipped this month" },
@@ -18,29 +11,18 @@ const STATS = [
 export function FleetStats() {
   return (
     <section
+      data-section="stats"
       id="stats"
-      className="relative py-32 lg:py-40 border-t border-hairline overflow-hidden"
+      className="relative h-screen w-full overflow-hidden"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/bg-fleet-stats.webp"
-        alt=""
-        aria-hidden
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 -z-10 w-full h-full object-cover"
-      />
       <div
-        className="absolute inset-0 -z-10"
-        style={{
-          background:
-            "linear-gradient(to right, var(--ink-deep), var(--ink-deep) 30%, transparent 100%)",
-        }}
+        data-scrim
         aria-hidden
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{ background: SCRIM_RECIPES.stats }}
       />
-
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-12">
-        <div className="mb-16 max-w-2xl">
+      <div className="relative z-[2] h-full max-w-[1280px] mx-auto px-6 lg:px-12 flex flex-col justify-center py-24">
+        <div className="mb-12 max-w-2xl">
           <span className="eyebrow">FLEET</span>
           <h2
             className="font-display text-sand mt-3"
@@ -52,12 +34,13 @@ export function FleetStats() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {STATS.map((s) => (
-            <StatBlock
-              key={s.label}
-              value={s.value}
-              label={s.label}
-              countUp={s.countUp ?? true}
-            />
+            <div key={s.label} data-anim="stat">
+              <StatBlock
+                value={s.value}
+                label={s.label}
+                countUp={s.countUp ?? true}
+              />
+            </div>
           ))}
         </div>
       </div>

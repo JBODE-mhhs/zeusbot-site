@@ -145,3 +145,30 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/*
+ * Reduced-motion structural fallback (scroll-choreography.md v5 §6).
+ *
+ * ScrollEngine sets `.rm` on <html> when prefers-reduced-motion is on.
+ * Sections then render in normal flow (no pin, no h-screen lock); the
+ * frame canvas hides; the static f15 poster takes over as the hero
+ * backdrop; all overlays render at final state from SSR (already true
+ * since v5 has no autoplay reveals).
+ */
+.rm [data-section] {
+  height: auto;
+  min-height: 100vh;
+  padding: 4rem 0;
+}
+.rm [data-frame-canvas] {
+  display: none;
+}
+.rm [data-frame-poster] {
+  display: block !important;
+  z-index: -1 !important;
+}
+.rm [data-beat][data-overlay],
+.rm [data-anim] {
+  opacity: 1;
+  transform: none;
+}

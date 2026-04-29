@@ -56,17 +56,14 @@ export default function RootLayout({
     >
       <head>
         {/*
-          Frame backdrop preload — LCP critical path only (§7.1, post §10/4 fix).
+          Frame backdrop preload — LCP critical path only (v6 §6.3 / §7.2).
 
-          Originally tier 1 (f01–f04) + tier 2 (f05–f15) + tier 3 (f16–f27)
-          were all hinted in <head>. On slow-4G with Lighthouse simulate, the
-          800 KB image bandwidth contention extended LCP to ~5.7 s (the SSR
-          f01-720 backdrop competed against 27 frames on a 1638 Kbps pipe).
-
-          New strategy: preload only the f01 LCP image in <head>. The remaining
-          26 frames are decoded by ScrollEngine.preloadRemainingFrames() which
-          runs in the background AFTER first paint — so they don't fight the
-          LCP image for bytes.
+          v6 ships 60 frames (vs v5's 27); preloading multiple frames in <head>
+          would multiply the LCP-bandwidth contention that the v5 §10/4 fix
+          already isolated. Strategy is unchanged from v5 post-fix: hint only
+          the f01 LCP image here. ScrollEngine.preloadRemainingFrames() decodes
+          f02..f60 in the background AFTER first paint via fire-and-forget
+          decode() so they don't fight the LCP image for bytes on slow-4G.
         */}
         <link
           rel="preload"

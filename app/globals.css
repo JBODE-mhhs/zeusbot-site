@@ -147,13 +147,14 @@ body {
 }
 
 /*
- * Reduced-motion structural fallback (scroll-choreography.md v5 §6).
+ * Reduced-motion structural fallback (scroll-choreography.md v6 §6.2).
  *
  * ScrollEngine sets `.rm` on <html> when prefers-reduced-motion is on.
- * Sections then render in normal flow (no pin, no h-screen lock); the
- * frame canvas hides; the static f15 poster takes over as the hero
- * backdrop; all overlays render at final state from SSR (already true
- * since v5 has no autoplay reveals).
+ * Sections render in normal flow (no pin, no h-screen lock); the frame
+ * canvas hides; the static f60 poster (resolved endframe) takes over as
+ * the hero backdrop; copy overlays render at final state, overriding the
+ * inline `opacity:0; translateY(16px)` SSR style on Value / CTA blocks
+ * (which exists to prevent hydrate-flash in the animated path).
  */
 .rm [data-section] {
   height: auto;
@@ -170,8 +171,8 @@ body {
   display: block !important;
   z-index: 0 !important;
 }
-.rm [data-beat][data-overlay],
+.rm [data-section] [data-overlay="copy"],
 .rm [data-anim] {
-  opacity: 1;
-  transform: none;
+  opacity: 1 !important;
+  transform: none !important;
 }

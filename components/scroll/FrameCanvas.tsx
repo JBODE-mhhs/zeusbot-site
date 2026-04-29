@@ -3,17 +3,18 @@
 import { forwardRef, useImperativeHandle, useRef } from "react";
 
 /**
- * FrameCanvas — single fixed canvas (z-0) that draws preloaded Image() bitmaps
+ * FrameCanvas — single fixed canvas (z:1) that draws preloaded Image() bitmaps
  * via ctx.drawImage on every ScrollTrigger update. Per scroll-choreography.md
- * §3 (canvas, not <img>.src mutation — sub-millisecond GPU-blit on every
- * scroll-tick avoids the 60Hz decode-storm that <img>.src= produces).
+ * v6 §2.0 + §3.4 (canvas, not <img>.src mutation — sub-millisecond GPU-blit on
+ * every scroll-tick avoids the 60Hz decode-storm that <img>.src= produces).
  *
- * Spec: 27 WebP frames, q72 mobile / q80 desktop srcset. Preloaded into
- * Image() objects on mount; drawFrame(idx) is called from ScrollEngine's
- * global-progress ScrollTrigger.
+ * v6 spec: 60 WebP frames at q72/q75/q80 srcset (720/1080/1440). Preloaded
+ * into Image() objects on mount; drawFrame(idx) is called from ScrollEngine's
+ * single +=1500% pin ScrollTrigger and short-circuits when idx unchanged
+ * (§3.4 — avoids GPU spam during pin idle).
  */
 
-const TOTAL_FRAMES = 27;
+const TOTAL_FRAMES = 60;
 
 const frameHref = (i: number, breakpoint: 720 | 1080 | 1440) => {
   const n = String(i).padStart(2, "0");
@@ -28,7 +29,8 @@ const frameSrcSet = (i: number) => {
 };
 
 export interface FrameCanvasHandle {
-  /** Draw frame at 1-indexed position (1..27). Clamps + no-ops if image not yet decoded. */
+  /** Draw frame at 1-indexed position (1..60). Clamps + no-ops if image not yet decoded.
+   *  Short-circuits if idx === lastDrawnIdx (spec §3.4). */
   drawFrame: (idx: number) => void;
   /** Recompute canvas dimensions to match viewport × DPR (debounced caller). */
   resize: () => void;
@@ -46,6 +48,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imagesRef = useRef<HTMLImageElement[]>([]);
   const dprRef = useRef(1);
+  const lastDrawnIdxRef = useRef<number>(-1);
 
   useImperativeHandle(
     ref,
@@ -53,6 +56,12 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
       drawFrame(idx: number) {
         const canvas = canvasRef.current;
         if (!canvas) return;
+
+        const clamped = Math.min(TOTAL_FRAMES, Math.max(1, idx | 0));
+        // Spec §3.4 — short-circuit if idx unchanged so pin-idle (and the
+        // many redundant onUpdate ticks during slow scroll) don't re-blit.
+        if (clamped === lastDrawnIdxRef.current) return;
+
         // alpha:true so the canvas stays transparent until first drawImage
         // (the SSR f01 backdrop must show through during the brief gap
         // between hydration and first paint). Perf cost is negligible —
@@ -60,7 +69,6 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
         const ctx = canvas.getContext("2d", { alpha: true });
         if (!ctx) return;
 
-        const clamped = Math.min(TOTAL_FRAMES, Math.max(1, idx | 0));
         const img = imagesRef.current[clamped];
         if (!img || !img.complete || img.naturalWidth === 0) return;
 
@@ -72,6 +80,7 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
         const x = (cw - w) / 2;
         const y = (ch - h) / 2;
         ctx.drawImage(img, x, y, w, h);
+        lastDrawnIdxRef.current = clamped;
       },
       resize() {
         const canvas = canvasRef.current;
@@ -82,6 +91,9 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
         canvas.height = Math.round(window.innerHeight * dpr);
         canvas.style.width = "100vw";
         canvas.style.height = "100vh";
+        // Resetting backing store invalidates the prior draw — force redraw
+        // on next ScrollTrigger tick by clearing the short-circuit guard.
+        lastDrawnIdxRef.current = -1;
       },
       async preloadFirstFrame() {
         if (imagesRef.current.length) {

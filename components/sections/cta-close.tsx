@@ -16,11 +16,10 @@ export function CtaClose() {
       id="cta"
       className="relative py-40 lg:py-56 overflow-hidden border-t border-hairline"
     >
-      {/* PLACEHOLDER — prometheus build-time: bg-cta-close.webp from frame_end */}
       <div
         className="absolute inset-0 -z-10 bg-cover bg-center"
         style={{
-          backgroundImage: "url(/frame_end.png)",
+          backgroundImage: "url(/bg-cta-close.webp)",
           backgroundColor: "var(--ink-deep)",
         }}
         aria-hidden

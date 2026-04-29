@@ -51,15 +51,30 @@ export function Hero() {
   }, []);
 
   // Preload all frames into the browser cache so scrub doesn't pop.
+  // Deferred behind requestIdleCallback so the 30 frame fetches don't
+  // compete with the LCP image (frame 1) for first-paint bandwidth.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const cache: HTMLImageElement[] = [];
-    for (let i = 1; i <= FRAME_COUNT; i++) {
-      const img = new Image();
-      img.src = FRAME_PATH(i);
-      cache.push(img);
+    const preload = () => {
+      for (let i = 2; i <= FRAME_COUNT; i++) {
+        const img = new Image();
+        img.src = FRAME_PATH(i);
+        cache.push(img);
+      }
+    };
+    type IdleWindow = Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+    };
+    const w = window as IdleWindow;
+    let timer = 0;
+    if (typeof w.requestIdleCallback === "function") {
+      w.requestIdleCallback(preload, { timeout: 2000 });
+    } else {
+      timer = window.setTimeout(preload, 800);
     }
     return () => {
+      if (timer) clearTimeout(timer);
       cache.length = 0;
     };
   }, []);
@@ -143,6 +158,7 @@ export function Hero() {
         }
         alt=""
         decoding="async"
+        fetchPriority="high"
         className="absolute inset-0 w-full h-full object-cover -z-10"
         aria-hidden
       />

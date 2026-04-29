@@ -164,11 +164,14 @@ export function ScrollEngine() {
       setupCtaPin(gsap, ScrollTrigger);
 
       // Global frame-canvas ScrollTrigger — drives drawFrame from overall
-      // page progress (covers the entire pinned ribbon range).
+      // page progress (covers the entire pinned ribbon range). Uses `%` to
+      // match per-section pins (`+=100%` per section); GSAP ScrollTrigger
+      // documents `%` as the supported viewport unit in `+=` — `vh` was
+      // ambiguous and Bugbot 04b2628 flagged risk of pixel-parse compression.
       ScrollTrigger.create({
         trigger: "main",
         start: "top top",
-        end: () => `+=${TOTAL_PIN_VH}vh`,
+        end: () => `+=${TOTAL_PIN_VH}%`,
         scrub: true,
         onUpdate: (self) => {
           if (!fc) return;
@@ -209,7 +212,7 @@ export function ScrollEngine() {
       ScrollTrigger.create({
         trigger: "main",
         start: "top top",
-        end: () => `+=${TOTAL_PIN_VH}vh`,
+        end: () => `+=${TOTAL_PIN_VH}%`,
         snap: {
           snapTo: (progress) => {
             // Snap to each section's start as a fraction of total pin length

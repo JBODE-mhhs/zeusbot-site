@@ -172,12 +172,19 @@ export function ScrollEngine() {
       if (mainEl) {
         mainEl.setAttribute("data-debug-tl-duration", String(tlDuration));
       }
-      console.log("[zeus-v6] ScrollTrigger.create OK", {
-        triggers: ScrollTrigger.getAll().length,
-        end: masterST.end,
-        start: masterST.start,
-        tlDuration,
-      });
+      // Probe-only diagnostics — gated to non-production builds. The
+      // window debug hooks (__zeus_st_debug, __zeus_gsap_debug) and the
+      // data-debug-tl-duration attribute remain unconditional so probes
+      // can still introspect on production previews; only the console
+      // log is silenced for prod page-load cleanliness.
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[zeus-v6] ScrollTrigger.create OK", {
+          triggers: ScrollTrigger.getAll().length,
+          end: masterST.end,
+          start: masterST.start,
+          tlDuration,
+        });
+      }
 
       // Resize: refresh ScrollTrigger so pin geometry recalculates against
       // the new viewport, and resize the canvas backing store.

@@ -88,8 +88,8 @@ export function ScrollEngine() {
         fc?.drawFrame(Math.round(frameState.idx));
       };
 
-      // Build three paused per-section timelines.
-      const { heroTl, valueTl, ctaTl } = setupSectionTimelines(gsap, {
+      // Build four paused per-section timelines.
+      const { heroTl, valueTl, proofTl, ctaTl } = setupSectionTimelines(gsap, {
         frameState,
         totalFrames: TOTAL_FRAMES,
         onFrameUpdate: drawFrameFromState,
@@ -101,26 +101,36 @@ export function ScrollEngine() {
       heroTl.play();
 
       // Per-section ScrollTriggers for replay-on-revisit.
+      // onEnter = forward scroll → play from start (restart).
+      // onEnterBack = reverse scroll → rewind (reverse from current progress).
+      // This gives Bode's "go from bottom up → moves in rewind, not start over."
       const heroST = ScrollTrigger.create({
         trigger: '[data-section="hero"]',
         start: "top center",
         end: "bottom center",
         onEnter: () => heroTl.restart(),
-        onEnterBack: () => heroTl.restart(),
+        onEnterBack: () => heroTl.reverse(),
       });
       const valueST = ScrollTrigger.create({
         trigger: '[data-section="value"]',
         start: "top center",
         end: "bottom center",
         onEnter: () => valueTl.restart(),
-        onEnterBack: () => valueTl.restart(),
+        onEnterBack: () => valueTl.reverse(),
+      });
+      const proofST = ScrollTrigger.create({
+        trigger: '[data-section="proof"]',
+        start: "top center",
+        end: "bottom center",
+        onEnter: () => proofTl.restart(),
+        onEnterBack: () => proofTl.reverse(),
       });
       const ctaST = ScrollTrigger.create({
         trigger: '[data-section="cta"]',
         start: "top center",
         end: "bottom center",
         onEnter: () => ctaTl.restart(),
-        onEnterBack: () => ctaTl.restart(),
+        onEnterBack: () => ctaTl.reverse(),
       });
 
       // Probe diagnostics — gated to non-production builds.
@@ -129,6 +139,7 @@ export function ScrollEngine() {
           triggers: ScrollTrigger.getAll().length,
           heroDuration: heroTl.duration(),
           valueDuration: valueTl.duration(),
+          proofDuration: proofTl.duration(),
           ctaDuration: ctaTl.duration(),
         });
       }
@@ -150,9 +161,11 @@ export function ScrollEngine() {
         window.removeEventListener("resize", onResizeDebounced);
         heroST.kill();
         valueST.kill();
+        proofST.kill();
         ctaST.kill();
         heroTl.kill();
         valueTl.kill();
+        proofTl.kill();
         ctaTl.kill();
       };
     })();
@@ -184,11 +197,11 @@ export function ScrollEngine() {
         }}
       />
       {mounted && <FrameCanvas ref={canvasRef} />}
-      {/* Reduced-motion poster — f180 (final frame of 12fps×15s clip). */}
+      {/* Reduced-motion poster — f240 (final frame of 16fps×15s clip). */}
       <img
         data-frame-poster
-        src="/frames/f180-720.webp"
-        srcSet="/frames/f180-720.webp 720w, /frames/f180-1080.webp 1080w, /frames/f180.webp 1440w"
+        src="/frames/f240-720.webp"
+        srcSet="/frames/f240-720.webp 720w, /frames/f240-1080.webp 1080w, /frames/f240.webp 1440w"
         sizes="100vw"
         alt=""
         aria-hidden

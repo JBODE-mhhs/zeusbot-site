@@ -58,12 +58,11 @@ export default function RootLayout({
         {/*
           Frame backdrop preload — LCP critical path only (v6 §6.3 / §7.2).
 
-          v6.1 ships 180 frames (12fps × 15s, post Bode "less choppy" pass —
-          was 60 in earlier rounds, 27 in v5). Preloading multiple frames in
-          <head> would multiply the LCP-bandwidth contention the v5 §10/4 fix
-          already isolated. Strategy is unchanged from v5 post-fix: hint only
+          v6.1 ships 240 frames (16fps × 15s, 4-section 60/60/60/60). Preloading
+          multiple frames in <head> would multiply the LCP-bandwidth contention
+          the v5 §10/4 fix already isolated. Strategy is unchanged: hint only
           the f001 LCP image here. ScrollEngine.preloadRemainingFrames()
-          decodes f002..f180 in the background AFTER first paint via
+          decodes f002..f240 in the background AFTER first paint via
           fire-and-forget decode() so they don't fight the LCP image for
           bytes on slow-4G.
         */}

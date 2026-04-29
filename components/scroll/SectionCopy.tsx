@@ -27,6 +27,12 @@ const VALUE_COPY = {
   sub: "A coordinated fleet of specialists, working in parallel — not a single agent on a single thread.",
 };
 
+const PROOF_COPY = {
+  eyebrow: "Trusted by builders",
+  headline: "Ships while you sleep.",
+  sub: "Real agents, real results — without adding headcount.",
+};
+
 const CTA_COPY = {
   eyebrow: "Pricing",
   headline: "From $99 / month.",
@@ -101,6 +107,37 @@ export function SectionCopy() {
       </section>
 
       <section
+        data-section="proof"
+        className="relative w-full min-h-screen flex items-center"
+      >
+        <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-6 lg:px-12">
+          <div
+            data-overlay="copy"
+            className="max-w-[640px] grid gap-6"
+            style={HIDDEN_INITIAL_STYLE}
+          >
+            <span className="eyebrow">{PROOF_COPY.eyebrow}</span>
+            <h2
+              className="font-display text-sand"
+              style={{
+                fontSize: "var(--display)",
+                lineHeight: 1.02,
+                textShadow: "0 1px 16px rgba(25, 12, 12, 0.7)",
+              }}
+            >
+              {PROOF_COPY.headline}
+            </h2>
+            <p
+              className="text-sand/85 max-w-[540px]"
+              style={{ textShadow: "0 1px 12px rgba(25, 12, 12, 0.6)" }}
+            >
+              {PROOF_COPY.sub}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section
         data-section="cta"
         className="relative w-full min-h-screen flex items-center"
       >
@@ -149,6 +186,7 @@ interface SetupOpts {
 interface SectionTimelines {
   heroTl: ReturnType<typeof GsapType.timeline>;
   valueTl: ReturnType<typeof GsapType.timeline>;
+  proofTl: ReturnType<typeof GsapType.timeline>;
   ctaTl: ReturnType<typeof GsapType.timeline>;
 }
 
@@ -158,12 +196,12 @@ interface SectionTimelines {
  * the frame canvas tween over 4s starting at 0.5s, leaving a brief tail
  * for the section to settle before the next snap.
  *
- * The 180-frame source (12fps × 15s, post Bode "less choppy" pass) is
- * partitioned 60/60/60 across sections so the user sees a contiguous 15s
- * storyline (3×5s @ 12fps) instead of three replays of the full clip:
- *   hero  → frames 1–60    (0.0s – 5.0s of source)
- *   value → frames 61–120  (5.0s – 10.0s of source)
- *   cta   → frames 121–180 (10.0s – 15.0s of source)
+ * The 240-frame source (16fps × 15s) is partitioned 60/60/60/60 across
+ * sections so the user sees a contiguous 15s storyline (4×3.75s @ 16fps):
+ *   hero  → frames 1–60    (0.00s –  3.75s of source)
+ *   value → frames 61–120  (3.75s –  7.50s of source)
+ *   proof → frames 121–180 (7.50s – 11.25s of source)
+ *   cta   → frames 181–240 (11.25s – 15.00s of source)
  *
  * Returned timelines are paused; caller plays/restarts them via
  * ScrollTrigger onEnter/onEnterBack.
@@ -180,7 +218,8 @@ export function setupSectionTimelines(
   // doesn't silently shift if total frame count ever changes.
   const HERO_RANGE = { start: 1, end: 60 };
   const VALUE_RANGE = { start: 61, end: 120 };
-  const CTA_RANGE = { start: 121, end: 180 };
+  const PROOF_RANGE = { start: 121, end: 180 };
+  const CTA_RANGE = { start: 181, end: 240 };
 
   const heroTl = gsap.timeline({ paused: true });
   heroTl
@@ -243,6 +282,27 @@ export function setupSectionTimelines(
       0.5,
     );
 
+  const proofTl = gsap.timeline({ paused: true });
+  proofTl
+    .fromTo(
+      '[data-section="proof"] [data-overlay="copy"]',
+      { opacity: 0, y: 24 },
+      { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" },
+      0.2,
+    )
+    .fromTo(
+      frameState,
+      { idx: PROOF_RANGE.start },
+      {
+        idx: PROOF_RANGE.end,
+        duration: 4,
+        ease: "none",
+        onUpdate: onFrameUpdate,
+        overwrite: "auto",
+      },
+      0.5,
+    );
+
   const ctaTl = gsap.timeline({ paused: true });
   ctaTl
     .fromTo(
@@ -259,15 +319,10 @@ export function setupSectionTimelines(
         duration: 4,
         ease: "none",
         onUpdate: onFrameUpdate,
-        // GSAP 3 default overwrite is `false` — without this, fast scroll
-        // through sections leaves multiple frame tweens running on the
-        // shared frameState.idx and the canvas paints the wrong section's
-        // frame progression. `auto` kills any in-flight tween targeting
-        // the same property when a new restart fires.
         overwrite: "auto",
       },
       0.5,
     );
 
-  return { heroTl, valueTl, ctaTl };
+  return { heroTl, valueTl, proofTl, ctaTl };
 }

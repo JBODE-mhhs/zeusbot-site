@@ -6,10 +6,15 @@ type GsapNs = typeof gsap;
 /**
  * Build a paused timeline of overlay rise/fade-in animations per spec §3.
  *
- * Default reveal recipe:
- *   { opacity: 0, y: 24 } → { opacity: 1, y: 0, duration: 0.6, ease: 'expo.out' }
+ * v4 reveal recipes:
+ *   "rise" → { y: distance } → { y: 0, duration: 0.6, ease: 'expo.out' }
+ *   "fade" → { opacity: 0 } → { opacity: 1, duration: 0.6, ease: 'expo.out' }
+ *   "persist" → no animation
  *
- * Mobile distance auto-collapses 24px → 16px (spec §6).
+ * "rise" no longer animates opacity (v4 LCP rework — overlays render
+ * SSR-visible so the hero headline is the LCP candidate; non-hero scene
+ * containers fade-in at the scene-host level so their overlays inherit
+ * the parent fade naturally). Mobile distance auto-collapses 24px → 16px.
  */
 export function buildOverlayTimeline(
   gsap: GsapNs,
@@ -36,11 +41,11 @@ export function buildOverlayTimeline(
       );
       continue;
     }
-    // rise
+    // rise — y-only (no opacity); SSR-visible overlays slide up.
     tl.fromTo(
       targets,
-      { opacity: 0, y: distance },
-      { opacity: 1, y: 0, duration: 0.6, ease: "expo.out" },
+      { y: distance },
+      { y: 0, duration: 0.6, ease: "expo.out" },
       o.delay ?? 0,
     );
   }

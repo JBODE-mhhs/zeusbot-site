@@ -21,10 +21,14 @@ export function FleetStats() {
       id="stats"
       className="relative py-32 lg:py-40 border-t border-hairline overflow-hidden"
     >
-      <div
-        className="absolute inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: "url(/bg-fleet-stats.webp)" }}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/bg-fleet-stats.webp"
+        alt=""
         aria-hidden
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 -z-10 w-full h-full object-cover"
       />
       <div
         className="absolute inset-0 -z-10"

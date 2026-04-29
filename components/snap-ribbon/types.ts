@@ -54,3 +54,29 @@ export interface BeatManifest {
   /** Selectors that dim from 1 → 0.3 on enter (e.g., prior how-it-works step). */
   dimOverlays?: OverlayDef[];
 }
+
+/**
+ * v4 §1.1 — section ids match SCENE_ID_BY_IDX in beats.ts. Wheel-tick
+ * coalescing operates on sections, not beats; auto-advance is intra-section
+ * only on Hero + How.
+ */
+export type SectionId =
+  | "hero"
+  | "capabilities"
+  | "how"
+  | "stats"
+  | "pricing"
+  | "cta";
+
+export interface SectionDef {
+  id: SectionId;
+  /** Beat ids belonging to this section, in advance order (B1..B11). */
+  beatIds: string[];
+  /**
+   * If set, beats auto-advance at this cadence (ms) once the section enters.
+   * v4 §1.1: Hero=800, How=1000. Other sections are user-paced (omit).
+   */
+  autoAdvanceMs?: number;
+  /** Scrim recipe applied while this section is active (see scrim.ts). */
+  scrim: ScrimId;
+}

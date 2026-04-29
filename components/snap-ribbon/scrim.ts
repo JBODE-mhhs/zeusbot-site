@@ -34,7 +34,20 @@ export const SCRIM_RECIPES: Record<ScrimId, string> = {
 export const REDUCED_MOTION_SCRIM =
   "linear-gradient(180deg, rgba(25,12,12,0.55), rgba(25,12,12,0.78))";
 
+/**
+ * Paint a scrim recipe onto a DOM element. v4 dual-layer pattern: callers
+ * paint the inactive scrim div, then opacity-blend over 300ms between
+ * <div data-scrim="A"> and <div data-scrim="B"> at the SnapRibbon JSX layer.
+ * This helper sets `background` only — transitions are owned by the JSX
+ * inline style (`transition: opacity 300ms ease`) so background paint
+ * doesn't compound onto the GPU-composited opacity blend (§6.3).
+ */
 export function applyScrim(el: HTMLElement | null, scrim: ScrimId) {
   if (!el) return;
   el.style.background = SCRIM_RECIPES[scrim];
+}
+
+/** Get the raw CSS background recipe for a scrim id. */
+export function scrimRecipe(scrim: ScrimId): string {
+  return SCRIM_RECIPES[scrim];
 }

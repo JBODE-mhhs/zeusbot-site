@@ -1,6 +1,3 @@
-"use client";
-
-import { useReducedMotion } from "framer-motion";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,23 +8,18 @@ import {
 import { CONTACT_MAILTO } from "@/lib/constants";
 
 /**
- * Hero scene (v3 — continuous backdrop).
+ * Hero scene — v4 LCP-friendly markup. All B1-B4 overlays render
+ * SSR-visible (no opacity-0 class) so the hero headline is the LCP
+ * candidate at first paint. The "rise" reveal animates y-translate only
+ * (reveal.ts §3); SnapRibbon's per-beat enter timeline drives the rise.
  *
- * Renders the four B1-B4 hero overlays co-located inside one shared scene
- * container. The cinematic frame backdrop is owned by SnapRibbon at z=0
- * (persistent across all 11 beats) — this component renders TEXT ONLY over
- * a transparent surface, with text-shadow handling contrast against the
+ * The cinematic frame backdrop is owned by SnapRibbon at z=0 (persistent
+ * across all 11 beats) — this component renders TEXT ONLY over a
+ * transparent surface, with text-shadow handling contrast against the
  * brightest pixel of the hero range (f01-f15).
- *
- * Each overlay is tagged `data-beat="B1..B4"` + `data-overlay="..."` so
- * SnapRibbon's per-beat enter timeline can rise/fade it on the matching
- * gesture. Reduced motion → all overlays render at final state (handled
- * here by initialOpacity); SnapRibbon handles the static-frame fallback.
  */
 
 export function Hero() {
-  const reduced = useReducedMotion();
-  const initialOpacity = reduced ? "opacity-100" : "opacity-0";
 
   return (
     <div className="relative h-full w-full">
@@ -36,7 +28,7 @@ export function Hero() {
           <span
             data-beat="B1"
             data-overlay="eyebrow"
-            className={`eyebrow ${initialOpacity}`}
+            className="eyebrow"
           >
             ZEUSBOT — A FLEET OF AGENTS
           </span>
@@ -53,28 +45,28 @@ export function Hero() {
             <span
               data-beat="B1"
               data-overlay="line-1"
-              className={`block ${initialOpacity}`}
+              className="block"
             >
               Some problems
             </span>
             <span
               data-beat="B2"
               data-overlay="line-2"
-              className={`block ${initialOpacity}`}
+              className="block"
             >
               take a <em>fleet</em>.
             </span>
             <span
               data-beat="B2"
               data-overlay="line-3"
-              className={`block ${initialOpacity}`}
+              className="block"
             >
               We forge the agents
             </span>
             <span
               data-beat="B2"
               data-overlay="line-4"
-              className={`block ${initialOpacity}`}
+              className="block"
             >
               that ship the work.
             </span>
@@ -83,7 +75,7 @@ export function Hero() {
           <p
             data-beat="B3"
             data-overlay="sub"
-            className={`text-sand/85 max-w-[540px] ${initialOpacity}`}
+            className="text-sand/85 max-w-[540px]"
             style={{ textShadow: "0 1px 12px rgba(25, 12, 12, 0.6)" }}
           >
             ZeusBot is agentic AI as a service for small business — a
@@ -93,7 +85,7 @@ export function Hero() {
           <div
             data-beat="B3"
             data-overlay="cta"
-            className={`flex flex-wrap gap-3 mt-2 ${initialOpacity}`}
+            className="flex flex-wrap gap-3 mt-2"
           >
             <a
               href={CONTACT_MAILTO}
@@ -126,7 +118,7 @@ export function Hero() {
           <div
             data-beat="B4"
             data-overlay="tagline-end"
-            className={`font-display text-sand text-3xl mt-8 ${initialOpacity}`}
+            className="font-display text-sand text-3xl mt-8"
             style={{ textShadow: "0 1px 12px rgba(25, 12, 12, 0.6)" }}
           >
             <em>Sent forth.</em>
@@ -135,7 +127,7 @@ export function Hero() {
           <div
             data-beat="B4"
             data-overlay="continue"
-            className={`eyebrow text-gold-orb mt-4 ${initialOpacity}`}
+            className="eyebrow text-gold-orb mt-4"
           >
             ↓ Continue
           </div>

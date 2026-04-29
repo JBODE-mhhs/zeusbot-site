@@ -1,4 +1,4 @@
-import type { BeatManifest } from "./types";
+import type { BeatManifest, SectionDef } from "./types";
 
 /**
  * Canonical 11-beat manifest (v3 — continuous backdrop).
@@ -21,10 +21,10 @@ export const BEATS: BeatManifest[] = [
     kind: "hero-internal",
     frameRange: [1, 4],
     scrim: "none",
-    overlays: [
-      { selector: '[data-beat="B1"][data-overlay="eyebrow"]', transform: "rise" },
-      { selector: '[data-beat="B1"][data-overlay="line-1"]', transform: "rise", delay: 0.12 },
-    ],
+    // v4 LCP optimization: B1 overlays render SSR-visible (no opacity-0)
+    // so the hero headline is the LCP candidate at first paint. GSAP
+    // does NOT animate B1 overlays — frame range play alone covers B1.
+    overlays: [],
   },
   {
     id: "B2",
@@ -45,7 +45,10 @@ export const BEATS: BeatManifest[] = [
     frameRange: [9, 12],
     scrim: "none",
     overlays: [
-      { selector: '[data-beat="B3"][data-overlay="sub"]', transform: "rise" },
+      // B3 sub is the LCP candidate (largest contentful text in viewport on
+      // mobile). Marked "persist" so GSAP never touches its transform —
+      // simulated LCP equals its SSR paint time. CTA still rises for rhythm.
+      { selector: '[data-beat="B3"][data-overlay="sub"]', transform: "persist" },
       { selector: '[data-beat="B3"][data-overlay="cta"]', transform: "rise", delay: 0.10 },
     ],
   },
@@ -160,3 +163,38 @@ export const SCENE_ID_BY_IDX = [
   "pricing",
   "cta",
 ] as const;
+
+/**
+ * v4 §1.1 section manifest — drives Observer wheel-tick coalescing.
+ *
+ * One wheel-tick advances by exactly one section. Auto-advance timers
+ * fire intra-section beats on Hero (800ms × 4 → 3.2s total) and How
+ * (1000ms × 3 → 3.0s total); the other 4 sections are user-paced and
+ * have a single beat each (mid-section interrupt → jump-cut not needed).
+ *
+ * `id` matches SCENE_ID_BY_IDX exactly (canonical mapping). `scrim` keys
+ * into SCRIM_RECIPES (geometric recipe, not section name) — daedalus
+ * v4 §3.4 owns the per-section recipe choice.
+ */
+export const SECTIONS: SectionDef[] = [
+  { id: "hero",         beatIds: ["B1", "B2", "B3", "B4"], autoAdvanceMs: 800,  scrim: "none" },
+  { id: "capabilities", beatIds: ["B5"],                                       scrim: "left-rail" },
+  { id: "how",          beatIds: ["B6", "B7", "B8"],       autoAdvanceMs: 1000, scrim: "right-rail" },
+  { id: "stats",        beatIds: ["B9"],                                       scrim: "vertical" },
+  { id: "pricing",      beatIds: ["B10"],                                      scrim: "vignette" },
+  { id: "cta",          beatIds: ["B11"],                                      scrim: "strong-vignette" },
+];
+
+export const TOTAL_SECTIONS = SECTIONS.length;
+
+/** Lookup helper — beat id → its section index (0..5). */
+export function sectionIdxOfBeat(beatId: string): number {
+  const i = SECTIONS.findIndex((s) => s.beatIds.includes(beatId));
+  return i < 0 ? 0 : i;
+}
+
+/** Lookup helper — beat id → terminal beat id of its section (for jump-cut). */
+export function terminalBeatOfSection(sectionIdx: number): string {
+  const s = SECTIONS[sectionIdx];
+  return s.beatIds[s.beatIds.length - 1];
+}

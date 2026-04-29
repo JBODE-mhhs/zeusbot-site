@@ -16,13 +16,15 @@ export function CtaClose() {
       id="cta"
       className="relative py-40 lg:py-56 overflow-hidden border-t border-hairline"
     >
-      <div
-        className="absolute inset-0 -z-10 bg-cover bg-center"
-        style={{
-          backgroundImage: "url(/bg-cta-close.webp)",
-          backgroundColor: "var(--ink-deep)",
-        }}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/bg-cta-close.webp"
+        alt=""
         aria-hidden
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 -z-10 w-full h-full object-cover"
+        style={{ backgroundColor: "var(--ink-deep)" }}
       />
       <div
         className="absolute inset-0 -z-10"

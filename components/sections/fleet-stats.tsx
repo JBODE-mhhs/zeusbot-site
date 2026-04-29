@@ -21,10 +21,9 @@ export function FleetStats() {
       id="stats"
       className="relative py-32 lg:py-40 border-t border-hairline overflow-hidden"
     >
-      {/* PLACEHOLDER — prometheus build-time: bg-fleet-stats.webp from frame_mid */}
       <div
         className="absolute inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: "url(/poster.webp)" }}
+        style={{ backgroundImage: "url(/bg-fleet-stats.webp)" }}
         aria-hidden
       />
       <div

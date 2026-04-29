@@ -15,19 +15,29 @@ import { CONTACT_MAILTO } from "@/lib/constants";
 /**
  * Hero — scroll-pinned cinematic intro per scroll-choreography.md.
  *
- * 300vh of scroll → 15s of <video>.currentTime via GSAP ScrollTrigger.
- * 9 overlay anchors (A0-A8) drive text reveals as the video scrubs.
+ * 300vh of scroll → 30 WebP frames extracted from source.mp4 (2 fps × 15s),
+ * scrubbed via GSAP ScrollTrigger. Why an image sequence and not <video>:
+ * Cloudflare Pages does not serve video/mp4 with `Accept-Ranges: bytes` for
+ * assets above ~5MB, so HTMLMediaElement.currentTime writes silently no-op
+ * and the video is effectively unseekable. A pre-decimated frame strip
+ * sidesteps the byte-range requirement entirely.
+ *
+ * 9 overlay anchors (A0-A8) drive text reveals as the strip advances.
  *
  * Three modes:
- *   1. Desktop + motion-OK (default): full pin + scrub + 9-anchor overlays
- *   2. Reduced motion: ScrollTrigger.disable, poster only, A4-state overlays
+ *   1. Desktop + motion-OK (default): full pin + frame-scrub + 9-anchor overlays
+ *   2. Reduced motion: ScrollTrigger.disable, mid-arc frame, A4-state overlays
  *      visible immediately, normal scroll past
- *   3. Mobile (≤768px): no pin, autoplay-once + bg-loop, fixed-timestamp
- *      Framer reveals (handled inline below)
+ *   3. Mobile (≤768px): no pin, mid-arc frame as poster, fixed-timestamp
+ *      Framer reveals
  */
+const FRAME_COUNT = 30;
+const FRAME_PATH = (i: number) =>
+  `/frames/f${String(i).padStart(2, "0")}.webp`;
+
 export function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const reduced = useReducedMotion();
   const [scrollPct, setScrollPct] = useState(reduced ? 0.5 : 0);
   const [isMobile, setIsMobile] = useState(false);
@@ -40,13 +50,27 @@ export function Hero() {
     return () => mq.removeEventListener("change", update);
   }, []);
 
+  // Preload all frames into the browser cache so scrub doesn't pop.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cache: HTMLImageElement[] = [];
+    for (let i = 1; i <= FRAME_COUNT; i++) {
+      const img = new Image();
+      img.src = FRAME_PATH(i);
+      cache.push(img);
+    }
+    return () => {
+      cache.length = 0;
+    };
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (reduced || isMobile) return;
 
     const section = sectionRef.current;
-    const video = videoRef.current;
-    if (!section || !video) return;
+    const img = imgRef.current;
+    if (!section || !img) return;
 
     let ctx: { revert: () => void } | null = null;
     let st: { kill: () => void } | null = null;
@@ -58,18 +82,7 @@ export function Hero() {
       ]);
       gsap.registerPlugin(ScrollTrigger);
 
-      // Wait for video metadata so we can read duration before binding scrub.
-      const ready = video.readyState >= 1
-        ? Promise.resolve()
-        : new Promise<void>((resolve) => {
-            const onLoaded = () => {
-              video.removeEventListener("loadedmetadata", onLoaded);
-              resolve();
-            };
-            video.addEventListener("loadedmetadata", onLoaded);
-          });
-      await ready;
-
+      let lastFrame = -1;
       ctx = gsap.context(() => {
         st = ScrollTrigger.create({
           trigger: section,
@@ -81,8 +94,14 @@ export function Hero() {
           onUpdate: (self) => {
             const p = self.progress;
             setScrollPct(p);
-            const dur = video.duration || 15;
-            video.currentTime = p * dur;
+            const frame = Math.min(
+              FRAME_COUNT,
+              Math.max(1, Math.round(p * (FRAME_COUNT - 1)) + 1),
+            );
+            if (frame !== lastFrame) {
+              img.src = FRAME_PATH(frame);
+              lastFrame = frame;
+            }
           },
         });
       }, section);
@@ -93,19 +112,6 @@ export function Hero() {
       ctx?.revert();
     };
   }, [reduced, isMobile]);
-
-  // Mobile autoplay-once on view
-  useEffect(() => {
-    if (!isMobile || reduced) return;
-    const video = videoRef.current;
-    if (!video) return;
-    const playPromise = video.play();
-    if (playPromise && typeof playPromise.catch === "function") {
-      playPromise.catch(() => {
-        /* iOS may reject autoplay even with muted+playsinline; poster shows */
-      });
-    }
-  }, [isMobile, reduced]);
 
   // Anchor visibility helpers — see scroll-choreography.md §2-§3 timeline
   const eyebrowOpacity = pctIn(scrollPct, 0, 0.62);
@@ -127,15 +133,16 @@ export function Hero() {
       className="relative h-screen w-full overflow-hidden bg-ink-deep"
       aria-label="ZeusBot — a fleet of agents"
     >
-      <video
-        ref={videoRef}
-        src="/source.mp4"
-        poster="/poster.webp"
-        muted
-        playsInline
-        preload="auto"
-        loop={isMobile && !reduced}
-        autoPlay={false}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        src={
+          reduced || isMobile
+            ? FRAME_PATH(Math.round(FRAME_COUNT / 2))
+            : FRAME_PATH(1)
+        }
+        alt=""
+        decoding="async"
         className="absolute inset-0 w-full h-full object-cover -z-10"
         aria-hidden
       />

@@ -158,6 +158,22 @@ export function SnapRibbon({ children }: Props) {
         });
       };
 
+      // Factored release path — covers both routes that exit the ribbon:
+      //   (a) forward gesture past B11 (drain branch below)
+      //   (b) skip-link activation (window 'snap-ribbon:release' listener)
+      // Strict order per scroll-choreography.md §8: kill Observer FIRST,
+      // restore body overflow SECOND, drop keyboard handler THIRD,
+      // setReleased(true) flips the JSX to scrolling-flow mode. Skip-link
+      // calls scrollIntoView synchronously after dispatchEvent returns —
+      // by that point body overflow is already '' so the scroll lands.
+      const releaseRibbon = () => {
+        observer?.kill();
+        observer = null;
+        document.body.style.overflow = "";
+        cleanupKey();
+        setReleased(true);
+      };
+
       const drain = () => {
         if (isAnimating || queue.length === 0) return;
         const dir = queue.shift()! as 1 | -1;
@@ -167,10 +183,7 @@ export function SnapRibbon({ children }: Props) {
         // Frame holds f27; CSS positioning shift handled in the JSX
         // released-branch (frame img: fixed → absolute).
         if (wasAtFinal && dir === +1) {
-          observer?.kill();
-          observer = null;
-          document.body.style.overflow = "";
-          setReleased(true);
+          releaseRibbon();
           return;
         }
 
@@ -222,6 +235,18 @@ export function SnapRibbon({ children }: Props) {
       });
 
       const onKey = (e: KeyboardEvent) => {
+        // Skip-link bypass — never gate keys when focus is on the WCAG
+        // escape hatch. Tab/Enter aren't in the advance set so they're
+        // already safe via the early-return below; this also covers Space
+        // (which IS in the advance set) defensively in case the skip-link
+        // is ever re-rendered as a <button> instead of <a>.
+        if (
+          (document.activeElement as HTMLElement | null)?.matches?.(
+            "[data-skip-link]",
+          )
+        ) {
+          return;
+        }
         const advance = ["ArrowDown", "PageDown", " "].includes(e.key)
           ? +1
           : ["ArrowUp", "PageUp"].includes(e.key)
@@ -232,8 +257,18 @@ export function SnapRibbon({ children }: Props) {
         if (queue.length < QUEUE_CAP) queue.push(advance);
         drain();
       };
+      // Skip-link release route (scroll-choreography.md §8). Listener runs
+      // synchronously inside the skip-link's onClick → dispatchEvent so by
+      // the time scrollIntoView fires on the next line, body overflow has
+      // already been restored.
+      const onRelease = () => releaseRibbon();
       window.addEventListener("keydown", onKey);
-      cleanupKey = () => window.removeEventListener("keydown", onKey);
+      window.addEventListener("snap-ribbon:release", onRelease);
+      cleanupKey = () => {
+        window.removeEventListener("keydown", onKey);
+        window.removeEventListener("snap-ribbon:release", onRelease);
+        cleanupKey = () => {}; // idempotent — release path may also run cleanup
+      };
     })();
 
     return () => {

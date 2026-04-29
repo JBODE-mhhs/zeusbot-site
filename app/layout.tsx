@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { LenisProvider } from "@/components/lenis-provider";
+import { SkipLink } from "@/components/skip-link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -92,6 +93,9 @@ export default function RootLayout({
         <link rel="preload" as="image" href="/frames/f27.webp" fetchPriority="low" />
       </head>
       <body className="min-h-screen flex flex-col">
+        {/* WCAG 2.1 AA escape hatch — must be first focusable element in <body>.
+            See scroll-choreography.md §8 + components/skip-link.tsx. */}
+        <SkipLink />
         <LenisProvider>{children}</LenisProvider>
       </body>
     </html>

@@ -48,7 +48,7 @@ export function SectionCopy() {
     <>
       <section
         data-section="hero"
-        className="relative h-screen w-full flex items-center"
+        className="absolute inset-0 w-full h-full flex items-center"
       >
         <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-6 lg:px-12">
           <div data-overlay="copy" className="max-w-[640px] grid gap-6">
@@ -75,7 +75,7 @@ export function SectionCopy() {
 
       <section
         data-section="value"
-        className="relative h-screen w-full flex items-center"
+        className="absolute inset-0 w-full h-full flex items-center"
       >
         <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-6 lg:px-12">
           <div
@@ -106,7 +106,7 @@ export function SectionCopy() {
 
       <section
         data-section="cta"
-        className="relative h-screen w-full flex items-center"
+        className="absolute inset-0 w-full h-full flex items-center"
       >
         <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-6 lg:px-12">
           <div
@@ -190,9 +190,15 @@ export function setupCopyTweens(
     0.66,
   );
 
-  // Force timeline to span the full pin scrub range so position 1.0
-  // maps cleanly to scroll-progress 1.0 (frame 60 / endframe).
-  tl.totalDuration(1);
+  // Anchor timeline's RAW duration at 1.0 by inserting a zero-duration
+  // tween at position 1.0. Both tl.totalDuration(1) and tl.duration(1)
+  // adjust via timeScale rather than extending the underlying duration,
+  // which leaves scrub-progress→tween-position mapping wrong: ScrollTrigger
+  // calls timeline.progress(scrollFrac) and progress() reads the raw
+  // duration, so without this anchor the natural duration is 0.68 (last
+  // tween at 0.66 + 0.02) and a tween at position 0.66 fires at scroll
+  // fraction 0.97. (PR #4 Bugbot HIGH 2026-04-29 — SectionCopy.tsx 192-195.)
+  tl.to({}, { duration: 0 }, 1);
 
   // gsap reference is consumed solely for the type — keep it imported
   // so a future direction change has access without re-threading args.

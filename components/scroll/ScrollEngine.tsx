@@ -102,6 +102,18 @@ export function ScrollEngine() {
 
       gsap.registerPlugin(ScrollTrigger);
 
+      // Expose plugin + gsap on window so the retest harness can confirm
+      // the bundle ran past registerPlugin and ScrollTrigger.create — the
+      // v6/PR-#4 ship-block was a silent no-op of gsap.timeline's internal
+      // scrollTrigger config; the explicit ScrollTrigger.create form below
+      // is module-direct and cannot quietly drop. Probes inspect these.
+      if (typeof window !== "undefined") {
+        (window as unknown as Record<string, unknown>).__zeus_st_debug =
+          ScrollTrigger;
+        (window as unknown as Record<string, unknown>).__zeus_gsap_debug =
+          gsap;
+      }
+
       // Lenis ↔ ScrollTrigger raf bridge — preserved verbatim from v5
       // §5.4. Bridge order is load-bearing: Lenis must drive the RAF that
       // ScrollTrigger reads from, otherwise reverse scroll stutters.
@@ -120,24 +132,52 @@ export function ScrollEngine() {
       gsap.ticker.add(tick);
       gsap.ticker.lagSmoothing(0);
 
-      // SINGLE pin + scrub timeline. trigger:'main', end:'+=1500%' per
-      // §2.1. onUpdate maps progress → frame index and drives the canvas.
-      // Copy crossfades are added to this same timeline by setupCopyTweens
-      // so all motion shares one scrub clock — no second ScrollTrigger.
-      const masterTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: "main",
-          start: "top top",
-          end: "+=1500%",
-          pin: true,
-          scrub: true,
-          onUpdate: (self) => {
-            fc?.drawFrame(progressToFrameIdx(self.progress));
-          },
+      // SINGLE pin + scrub trigger. trigger:'main' is the 100vh shell;
+      // end:'+=1500%' per spec §2.1 extends document height by 16x. The
+      // master timeline is paused — ScrollTrigger drives it via the
+      // `animation` binding. Frame canvas is wired through onUpdate so
+      // progress → frame mapping shares the scrub clock. v5 used the same
+      // explicit-create form; gsap.timeline({scrollTrigger:{...}}) shipped
+      // in v6 round-1 silently no-op'd under Turbopack and was the smoking
+      // gun behind theseus's 6/6 RED retest verdict (2026-04-29).
+      const masterTl = gsap.timeline({ paused: true });
+      setupCopyTweens(gsap, masterTl);
+
+      const masterST = ScrollTrigger.create({
+        trigger: "main",
+        start: "top top",
+        end: () => "+=" + window.innerHeight * 15,
+        pin: true,
+        // ScrollTrigger 3.15.0 source line 738: when the pinned element's
+        // parent is `display: flex`, pinSpacing defaults to FALSE — the
+        // pin engages but the spacer never extends, so document height
+        // stays at 1 viewport and the trigger never scrubs past progress
+        // 0.028. <body> here is `min-h-screen flex flex-col`, so we must
+        // force pinSpacing on explicitly. Without this the entire scrub
+        // is dead — exact ship-block from PR #4 round 1 (theseus 6/6 RED).
+        pinSpacing: true,
+        scrub: true,
+        animation: masterTl,
+        onUpdate: (self) => {
+          fc?.drawFrame(progressToFrameIdx(self.progress));
         },
       });
 
-      setupCopyTweens(gsap, masterTl);
+      // Live readout for the retest harness — duration must be 1.0 so the
+      // scrub maps scroll fraction directly to tween position (Bug C, see
+      // SectionCopy.tsx anchor). Surfacing on <main> as a data attribute
+      // means probes can read it without exposing window.gsap.
+      const tlDuration = masterTl.duration();
+      const mainEl = document.querySelector("main");
+      if (mainEl) {
+        mainEl.setAttribute("data-debug-tl-duration", String(tlDuration));
+      }
+      console.log("[zeus-v6] ScrollTrigger.create OK", {
+        triggers: ScrollTrigger.getAll().length,
+        end: masterST.end,
+        start: masterST.start,
+        tlDuration,
+      });
 
       // Resize: refresh ScrollTrigger so pin geometry recalculates against
       // the new viewport, and resize the canvas backing store.

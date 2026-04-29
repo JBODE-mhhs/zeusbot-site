@@ -19,7 +19,7 @@ export default function Home() {
     <>
       <NavBar />
       <ScrollEngine />
-      <main className="relative">
+      <main className="relative h-screen w-full overflow-hidden">
         <SectionCopy />
       </main>
       <Footer />

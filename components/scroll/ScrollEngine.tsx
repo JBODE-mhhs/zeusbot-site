@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FrameCanvas, type FrameCanvasHandle } from "./FrameCanvas";
 import { setupHeroPin } from "./HeroPin";
 import { setupCapabilitiesPin } from "./CapabilitiesPin";
@@ -71,9 +71,20 @@ function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number) {
  */
 export function ScrollEngine() {
   const canvasRef = useRef<FrameCanvasHandle>(null);
+  // Canvas is client-only — keeps it out of SSR DOM so Lighthouse identifies
+  // the SSR <img data-frame-bg> as the unambiguous LCP candidate. Without this,
+  // the simulator picks the SSR canvas as the largest visible element and
+  // gates LCP on JS execution → drawFrame, which extends LCP to ~6s on mobile
+  // slow-4G + CPU 4x. The img is in SSR HTML, preloaded with high priority.
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!mounted) return;
 
     const reduced = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
@@ -87,17 +98,44 @@ export function ScrollEngine() {
     let cleanup: (() => void) | null = null;
 
     (async () => {
-      const [
-        { default: Lenis },
-        { gsap },
-        { ScrollTrigger },
-      ] = await Promise.all([
+      // Kick off f01 decode + lib imports in parallel — f01 is the LCP target
+      // (§7.1) and must paint inside the 2.5s budget. Earlier impl awaited a
+      // Promise.all over all 27 frames before first paint, which deferred the
+      // LCP candidate behind ~800 KB of decode and tripped Lighthouse §10/4.
+      const fc = canvasRef.current;
+      fc?.resize();
+      const firstFramePromise = fc?.preloadFirstFrame() ?? Promise.resolve();
+
+      const libsPromise = Promise.all([
         import("lenis"),
         import("gsap"),
         import("gsap/ScrollTrigger"),
       ]);
 
+      // Paint f01 the moment it's decoded — independent of the lib imports.
+      firstFramePromise.then(() => {
+        if (cancelled) return;
+        fc?.drawFrame(1);
+      });
+
+      const [
+        { default: Lenis },
+        { gsap },
+        { ScrollTrigger },
+      ] = await libsPromise;
+
       if (cancelled) return;
+
+      // Make sure we've drawn f01 before any per-section ScrollTrigger
+      // refreshes (avoids a black-canvas flash if libs load before f01).
+      await firstFramePromise;
+      if (cancelled) return;
+      fc?.drawFrame(1);
+
+      // Continue decoding f02..f27 in the background — fire-and-forget;
+      // ScrollEngine's frame-canvas ScrollTrigger guards on img.complete
+      // and skips the draw if a frame isn't ready yet.
+      fc?.preloadRemainingFrames();
 
       gsap.registerPlugin(ScrollTrigger);
 
@@ -115,14 +153,6 @@ export function ScrollEngine() {
       const tick = (time: number) => lenis.raf(time * 1000);
       gsap.ticker.add(tick);
       gsap.ticker.lagSmoothing(0);
-
-      // Frame canvas: preload + initial size + first paint
-      const fc = canvasRef.current;
-      if (fc) {
-        fc.resize();
-        await fc.preloadFrames();
-        fc.drawFrame(1);
-      }
 
       // Per-section pins (registers ScrollTriggers; ordering matters because
       // pin spacers stack vertically and later sections measure off earlier ones)
@@ -219,13 +249,35 @@ export function ScrollEngine() {
       cancelled = true;
       cleanup?.();
     };
-  }, []);
+  }, [mounted]);
 
   return (
     <>
-      <FrameCanvas ref={canvasRef} />
-      {/* SSR LCP-fallback poster: visible only in reduced-motion mode (canvas hidden);
-          the ScrollEngine doesn't paint canvas before user interaction in rm mode. */}
+      {/* SSR f01 backdrop — LCP candidate. Sits at z:0 under the canvas
+          (canvas is z:1, transparent until first paint). The browser paints
+          this image as soon as f01-720.webp decodes (preloaded with
+          fetchpriority:high in app/layout.tsx <head>), well before the
+          ScrollEngine effect hydrates — keeping LCP under the §7.1 budget.
+          .rm hides this and shows data-frame-poster (f15) instead. */}
+      <img
+        data-frame-bg
+        src="/frames/f01-720.webp"
+        srcSet="/frames/f01-720.webp 720w, /frames/f01-1080.webp 1080w, /frames/f01.webp 1440w"
+        sizes="100vw"
+        alt=""
+        aria-hidden
+        style={{
+          position: "fixed",
+          inset: 0,
+          width: "100vw",
+          height: "100vh",
+          objectFit: "cover",
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
+      {mounted && <FrameCanvas ref={canvasRef} />}
+      {/* Reduced-motion poster (f15 — most informative hero frame per §6). */}
       <img
         data-frame-poster
         src="/frames/f15-720.webp"

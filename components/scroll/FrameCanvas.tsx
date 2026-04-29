@@ -32,8 +32,11 @@ export interface FrameCanvasHandle {
   drawFrame: (idx: number) => void;
   /** Recompute canvas dimensions to match viewport × DPR (debounced caller). */
   resize: () => void;
-  /** Kick off Image() decode for all 27 frames at the active breakpoint. */
-  preloadFrames: () => Promise<void>;
+  /** Decode f01 only — resolves as soon as the LCP frame is paintable.
+   *  Spec §7.1: f01 paint must land inside the LCP window. */
+  preloadFirstFrame: () => Promise<void>;
+  /** Decode f02..f27 in the background — fire-and-forget after first paint. */
+  preloadRemainingFrames: () => void;
 }
 
 export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
@@ -50,7 +53,11 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
       drawFrame(idx: number) {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const ctx = canvas.getContext("2d", { alpha: false });
+        // alpha:true so the canvas stays transparent until first drawImage
+        // (the SSR f01 backdrop must show through during the brief gap
+        // between hydration and first paint). Perf cost is negligible —
+        // drawImage cover-crop overwrites the full surface every tick.
+        const ctx = canvas.getContext("2d", { alpha: true });
         if (!ctx) return;
 
         const clamped = Math.min(TOTAL_FRAMES, Math.max(1, idx | 0));
@@ -76,26 +83,37 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
         canvas.style.width = "100vw";
         canvas.style.height = "100vh";
       },
-      async preloadFrames() {
-        if (imagesRef.current.length) return;
-        const arr: HTMLImageElement[] = new Array(TOTAL_FRAMES + 1);
-        const promises: Promise<void>[] = [];
-        for (let i = 1; i <= TOTAL_FRAMES; i++) {
+      async preloadFirstFrame() {
+        if (imagesRef.current.length) {
+          // Already populated — first frame may already be decoded
+          const existing = imagesRef.current[1];
+          if (existing?.complete && existing.naturalWidth > 0) return;
+        } else {
+          imagesRef.current = new Array(TOTAL_FRAMES + 1);
+        }
+        const img = new Image();
+        img.decoding = "async";
+        img.srcset = frameSrcSet(1);
+        img.sizes = "100vw";
+        img.src = frameHref(1, 1080);
+        imagesRef.current[1] = img;
+        await img.decode().catch(() => undefined);
+      },
+      preloadRemainingFrames() {
+        if (!imagesRef.current.length) {
+          imagesRef.current = new Array(TOTAL_FRAMES + 1);
+        }
+        for (let i = 2; i <= TOTAL_FRAMES; i++) {
+          if (imagesRef.current[i]) continue;
           const img = new Image();
           img.decoding = "async";
           img.srcset = frameSrcSet(i);
           img.sizes = "100vw";
           img.src = frameHref(i, 1080);
-          arr[i] = img;
-          promises.push(
-            img
-              .decode()
-              .catch(() => undefined)
-              .then(() => undefined),
-          );
+          imagesRef.current[i] = img;
+          // Fire-and-forget decode; drawFrame() guards on img.complete
+          img.decode().catch(() => undefined);
         }
-        imagesRef.current = arr;
-        await Promise.all(promises);
       },
     }),
     [],
@@ -111,7 +129,11 @@ export const FrameCanvas = forwardRef<FrameCanvasHandle>(function FrameCanvas(
         inset: 0,
         width: "100vw",
         height: "100vh",
-        zIndex: 0,
+        // z:1 sits above the SSR f01 backdrop (z:0). Canvas is transparent
+        // until first drawFrame; the SSR image shows through and serves as
+        // the LCP candidate. Section content overlays both at z:[1-2] inside
+        // each <section data-section> stacking context.
+        zIndex: 1,
         pointerEvents: "none",
       }}
     />

@@ -163,9 +163,12 @@ body {
 .rm [data-frame-canvas] {
   display: none;
 }
+.rm [data-frame-bg] {
+  display: none;
+}
 .rm [data-frame-poster] {
   display: block !important;
-  z-index: -1 !important;
+  z-index: 0 !important;
 }
 .rm [data-beat][data-overlay],
 .rm [data-anim] {

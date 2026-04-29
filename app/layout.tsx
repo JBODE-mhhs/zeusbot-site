@@ -56,64 +56,26 @@ export default function RootLayout({
     >
       <head>
         {/*
-          Frame backdrop preload chain (scroll-choreography.md v5 §7.1).
+          Frame backdrop preload — LCP critical path only (§7.1, post §10/4 fix).
 
-          Tier 1 (LCP-block, f01–f04): high priority. Mobile DPR=2 picks
-          the -720 variant via imageSrcSet (~17 KB × 4 = ~68 KB) so the
-          FrameCanvas can paint the first frame within the LCP window.
+          Originally tier 1 (f01–f04) + tier 2 (f05–f15) + tier 3 (f16–f27)
+          were all hinted in <head>. On slow-4G with Lighthouse simulate, the
+          800 KB image bandwidth contention extended LCP to ~5.7 s (the SSR
+          f01-720 backdrop competed against 27 frames on a 1638 Kbps pipe).
 
-          Tier 2 (Hero rest, f05–f15): low priority. Browser schedules
-          after Tier 1; warms the byte cache before the hero pin's scrub
-          range covers them.
-
-          Tier 3 (Content, f16–f27): prefetch hints in head; lower priority
-          still, off the LCP critical path. The canvas preload pass kicks
-          off Image() decode for all 27 frames after first paint.
+          New strategy: preload only the f01 LCP image in <head>. The remaining
+          26 frames are decoded by ScrollEngine.preloadRemainingFrames() which
+          runs in the background AFTER first paint — so they don't fight the
+          LCP image for bytes.
         */}
-        {/* Tier 1 — LCP-block */}
-        {[1, 2, 3, 4].map((i) => {
-          const n = String(i).padStart(2, "0");
-          return (
-            <link
-              key={`pre-${n}`}
-              rel="preload"
-              as="image"
-              href={`/frames/f${n}-720.webp`}
-              imageSrcSet={`/frames/f${n}-720.webp 720w, /frames/f${n}-1080.webp 1080w, /frames/f${n}.webp 1440w`}
-              imageSizes="100vw"
-              fetchPriority="high"
-            />
-          );
-        })}
-        {/* Tier 2 — Hero rest */}
-        {[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((i) => {
-          const n = String(i).padStart(2, "0");
-          return (
-            <link
-              key={`pre-${n}`}
-              rel="preload"
-              as="image"
-              href={`/frames/f${n}-720.webp`}
-              imageSrcSet={`/frames/f${n}-720.webp 720w, /frames/f${n}-1080.webp 1080w, /frames/f${n}.webp 1440w`}
-              imageSizes="100vw"
-              fetchPriority="low"
-            />
-          );
-        })}
-        {/* Tier 3 — Content (prefetch, off LCP path) */}
-        {[16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27].map((i) => {
-          const n = String(i).padStart(2, "0");
-          return (
-            <link
-              key={`prefetch-${n}`}
-              rel="prefetch"
-              as="image"
-              href={`/frames/f${n}-720.webp`}
-              imageSrcSet={`/frames/f${n}-720.webp 720w, /frames/f${n}-1080.webp 1080w, /frames/f${n}.webp 1440w`}
-              imageSizes="100vw"
-            />
-          );
-        })}
+        <link
+          rel="preload"
+          as="image"
+          href="/frames/f01-720.webp"
+          imageSrcSet="/frames/f01-720.webp 720w, /frames/f01-1080.webp 1080w, /frames/f01.webp 1440w"
+          imageSizes="100vw"
+          fetchPriority="high"
+        />
       </head>
       <body className="min-h-screen flex flex-col">
         {/* WCAG 2.1 AA escape hatch — must be first focusable element in <body>.

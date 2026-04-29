@@ -155,9 +155,15 @@ interface SectionTimelines {
 /**
  * setupSectionTimelines — builds three independent paused timelines (5s
  * each). Each one fades in its copy block over the first ~0.6s, then runs
- * the frame canvas tween from frame 1→`totalFrames` over 4s starting at
- * 0.5s, leaving a brief tail for the section to settle before the next
- * snap.
+ * the frame canvas tween over 4s starting at 0.5s, leaving a brief tail
+ * for the section to settle before the next snap.
+ *
+ * The 60-frame source is partitioned 20/20/20 across sections so the user
+ * sees a contiguous 15s storyline (3×5s) instead of three replays of the
+ * full clip:
+ *   hero  → frames 1–20
+ *   value → frames 21–40
+ *   cta   → frames 41–60
  *
  * Returned timelines are paused; caller plays/restarts them via
  * ScrollTrigger onEnter/onEnterBack.
@@ -166,7 +172,15 @@ export function setupSectionTimelines(
   gsap: typeof GsapType,
   opts: SetupOpts,
 ): SectionTimelines {
-  const { frameState, totalFrames, onFrameUpdate } = opts;
+  const { frameState, onFrameUpdate } = opts;
+
+  // Per-section frame ranges — see JSDoc above. `totalFrames` is still on
+  // the SetupOpts shape (callers pass TOTAL_FRAMES=60) but the per-section
+  // ranges are explicit constants so the partition is audit-friendly and
+  // doesn't silently shift if total frame count ever changes.
+  const HERO_RANGE = { start: 1, end: 20 };
+  const VALUE_RANGE = { start: 21, end: 40 };
+  const CTA_RANGE = { start: 41, end: 60 };
 
   const heroTl = gsap.timeline({ paused: true });
   heroTl
@@ -187,9 +201,9 @@ export function setupSectionTimelines(
     )
     .fromTo(
       frameState,
-      { idx: 1 },
+      { idx: HERO_RANGE.start },
       {
-        idx: totalFrames,
+        idx: HERO_RANGE.end,
         duration: 4,
         ease: "none",
         onUpdate: onFrameUpdate,
@@ -213,9 +227,9 @@ export function setupSectionTimelines(
     )
     .fromTo(
       frameState,
-      { idx: 1 },
+      { idx: VALUE_RANGE.start },
       {
-        idx: totalFrames,
+        idx: VALUE_RANGE.end,
         duration: 4,
         ease: "none",
         onUpdate: onFrameUpdate,
@@ -239,9 +253,9 @@ export function setupSectionTimelines(
     )
     .fromTo(
       frameState,
-      { idx: 1 },
+      { idx: CTA_RANGE.start },
       {
-        idx: totalFrames,
+        idx: CTA_RANGE.end,
         duration: 4,
         ease: "none",
         onUpdate: onFrameUpdate,

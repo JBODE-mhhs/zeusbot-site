@@ -36,7 +36,7 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-hairline">
-        <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-6 text-[13px] text-bronze-mid flex justify-between flex-wrap gap-3">
+        <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-6 text-[13px] text-tan flex justify-between flex-wrap gap-3">
           <span>© 2026 ZeusBot — built by humans + agents.</span>
           <span className="font-mono uppercase tracking-[0.06em] text-[11px]">v1.0</span>
         </div>

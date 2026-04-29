@@ -11,47 +11,26 @@ import {
 import { CONTACT_MAILTO } from "@/lib/constants";
 
 /**
- * Hero scene (v2 SnapRibbon).
+ * Hero scene (v3 — continuous backdrop).
  *
- * Renders the hero frame as a single <img data-hero-img> swapped by
- * SnapRibbon's frame-player on each hero beat (B1..B4). Overlays are
- * tagged with data-beat (which beat reveals them) + data-overlay (semantic
- * role); SnapRibbon queries these and animates them on the corresponding
- * beat's enter timeline.
+ * Renders the four B1-B4 hero overlays co-located inside one shared scene
+ * container. The cinematic frame backdrop is owned by SnapRibbon at z=0
+ * (persistent across all 11 beats) — this component renders TEXT ONLY over
+ * a transparent surface, with text-shadow handling contrast against the
+ * brightest pixel of the hero range (f01-f15).
  *
- * Reduced motion: all overlays render at final state, frame is f15
- * (mid-arc poster), no animation runs. SnapRibbon handles the gating —
- * this component just respects the same prefers-reduced-motion media
- * query for its own initial-render decisions.
+ * Each overlay is tagged `data-beat="B1..B4"` + `data-overlay="..."` so
+ * SnapRibbon's per-beat enter timeline can rise/fade it on the matching
+ * gesture. Reduced motion → all overlays render at final state (handled
+ * here by initialOpacity); SnapRibbon handles the static-frame fallback.
  */
-
-const INITIAL_FRAME = "/frames/f01.webp";
-const REDUCED_FRAME = "/frames/f15.webp";
 
 export function Hero() {
   const reduced = useReducedMotion();
   const initialOpacity = reduced ? "opacity-100" : "opacity-0";
 
   return (
-    <div
-      data-scene-content="hero"
-      className="relative h-full w-full overflow-hidden bg-ink-deep"
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        data-hero-img
-        src={reduced ? REDUCED_FRAME : INITIAL_FRAME}
-        alt=""
-        decoding="async"
-        fetchPriority="high"
-        className="absolute inset-0 w-full h-full object-cover -z-10"
-        aria-hidden
-      />
-      <div
-        className="absolute inset-0 -z-10 bg-gradient-to-r from-ink-deep/85 via-ink-deep/55 to-transparent"
-        aria-hidden
-      />
-
+    <div className="relative h-full w-full">
       <div className="relative h-full max-w-[1280px] mx-auto px-6 lg:px-12 flex items-center">
         <div className="max-w-[640px] grid gap-6 pt-32">
           <span
@@ -68,7 +47,7 @@ export function Hero() {
             style={{
               fontSize: "var(--display)",
               lineHeight: 1.02,
-              textShadow: "0 1px 16px rgba(0,0,0,0.6)",
+              textShadow: "0 1px 16px rgba(25, 12, 12, 0.7)",
             }}
           >
             <span
@@ -105,7 +84,7 @@ export function Hero() {
             data-beat="B3"
             data-overlay="sub"
             className={`text-sand/85 max-w-[540px] ${initialOpacity}`}
-            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.5)" }}
+            style={{ textShadow: "0 1px 12px rgba(25, 12, 12, 0.6)" }}
           >
             ZeusBot is agentic AI as a service for small business — a
             coordinated fleet of specialists, always on, always shipping.
@@ -148,6 +127,7 @@ export function Hero() {
             data-beat="B4"
             data-overlay="tagline-end"
             className={`font-display text-sand text-3xl mt-8 ${initialOpacity}`}
+            style={{ textShadow: "0 1px 12px rgba(25, 12, 12, 0.6)" }}
           >
             <em>Sent forth.</em>
           </div>

@@ -113,6 +113,7 @@ export function SnapRibbon({ children }: Props) {
     let observer: { kill: () => void; disable: () => void; enable: () => void } | null = null;
     let isAnimating = false;
     let cancelled = false;
+    let isReleased = false;
     let cleanupKey = () => {};
     let autoAdvanceTimer: number | null = null;
 
@@ -266,6 +267,7 @@ export function SnapRibbon({ children }: Props) {
         const stepMs = section.autoAdvanceMs;
 
         const tick = () => {
+          if (isReleased) return; // ribbon released — stop the chain (Bugbot F7)
           if (sectionRef.current !== sectionIdx) return; // user already advanced
           const currentBeatId = BEATS[beatRef.current].id;
           const beatPos = section.beatIds.indexOf(currentBeatId);
@@ -298,6 +300,7 @@ export function SnapRibbon({ children }: Props) {
       // SECOND, drop keyboard handler THIRD, setReleased(true) flips to
       // scrolling-flow mode.
       const releaseRibbon = () => {
+        isReleased = true;
         cancelAutoAdvance();
         observer?.kill();
         observer = null;

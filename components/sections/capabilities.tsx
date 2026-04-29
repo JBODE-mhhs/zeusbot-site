@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Mail, Code, Paintbrush, Receipt, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -82,16 +83,16 @@ export function Capabilities() {
             >
               {FEATURED.headline}
             </h3>
-            <p className="text-bronze-up max-w-md">{FEATURED.body}</p>
+            <p className="text-sand/80 max-w-md">{FEATURED.body}</p>
 
-            {/* PLACEHOLDER — iris dispatch: capability-featured.webp dashboard mock */}
             <div className="mt-6 aspect-[16/10] rounded-xl border border-hairline-up bg-ink-deep relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-ink-warm to-ink-deep" />
-              <div className="relative h-full flex items-center justify-center">
-                <span className="eyebrow text-bronze-mid">
-                  PLACEHOLDER · DASHBOARD MOCK · IRIS RENDER PENDING
-                </span>
-              </div>
+              <Image
+                src="/capability-featured.webp"
+                alt="Molten-gold figure forging an artifact at a Greek-revival forge"
+                fill
+                sizes="(max-width: 1024px) 100vw, 60vw"
+                className="object-cover"
+              />
             </div>
           </motion.article>
 
@@ -119,7 +120,7 @@ export function Capabilities() {
                   <h3 className="font-display text-sand text-[20px] leading-tight mb-1">
                     {cap.headline}
                   </h3>
-                  <p className="text-[15px] text-bronze-up leading-snug">
+                  <p className="text-[15px] text-sand/80 leading-snug">
                     {cap.body}
                   </p>
                 </div>

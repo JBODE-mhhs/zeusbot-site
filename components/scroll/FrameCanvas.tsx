@@ -14,7 +14,7 @@ import { forwardRef, useImperativeHandle, useRef } from "react";
  * (§3.4 — avoids GPU spam during pin idle).
  */
 
-const TOTAL_FRAMES = 60;
+export const TOTAL_FRAMES = 60;
 
 const frameHref = (i: number, breakpoint: 720 | 1080 | 1440) => {
   const n = String(i).padStart(2, "0");

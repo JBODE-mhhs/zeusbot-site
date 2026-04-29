@@ -2,21 +2,17 @@ import type { gsap as GsapType } from "gsap";
 
 /**
  * SectionCopy — three scroll-anchored copy blocks (Hero / Value / CTA) per
- * scroll-choreography.md v6 §1.2. Each section has exactly ONE copy slot
- * marked `[data-overlay="copy"]`; crossfades happen at fractional pin
- * boundaries 0.31/0.33 (Hero→Value) and 0.64/0.66 (Value→CTA), per §3.1.
+ * scroll-choreography.md v6.1. Each section is a normal-flow `min-h-screen`
+ * block participating in `scroll-snap-type: y mandatory`. ScrollTrigger
+ * fires onEnter/onEnterBack to play the section's paused 5s timeline
+ * (`tl.restart()`); native scroll handles snap and momentum.
  *
- * Copy text is placeholder per spec §1.2 — final copy is a copywriter
- * handoff. Slots are reserved at the documented selectors so swap-in is
- * a pure text edit.
+ * No `absolute inset-0` overlay — sections stack vertically, and only one
+ * is in viewport at a time courtesy of scroll-snap.
  *
- * Architectural rules baked in (§5.2 / Appendix A):
- *  - Single pin owns the whole 1500% scrub; we contribute tweens to the
- *    caller's master timeline rather than creating our own ScrollTrigger.
- *  - No direction guards, no replay flag, no progress watermark Set.
- *  - No timeline-label calls — labels imply snap, v6 has no snap.
- *  - Value/CTA copy initial state is hidden (opacity:0, y:16); SSR inline
- *    style matches so nothing flashes during hydrate.
+ * Initial copy state for value/cta is hidden via inline style so SSR doesn't
+ * flash before hydrate; hero copy is visible from SSR (it's the first
+ * paint and its timeline plays a native fade-up on mount).
  */
 
 const HERO_COPY = {
@@ -40,7 +36,7 @@ const CTA_COPY = {
 
 const HIDDEN_INITIAL_STYLE: React.CSSProperties = {
   opacity: 0,
-  transform: "translateY(16px)",
+  transform: "translateY(24px)",
 };
 
 export function SectionCopy() {
@@ -48,7 +44,7 @@ export function SectionCopy() {
     <>
       <section
         data-section="hero"
-        className="absolute inset-0 w-full h-full flex items-center"
+        className="relative w-full min-h-screen flex items-center"
       >
         <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-6 lg:px-12">
           <div data-overlay="copy" className="max-w-[640px] grid gap-6">
@@ -75,7 +71,7 @@ export function SectionCopy() {
 
       <section
         data-section="value"
-        className="absolute inset-0 w-full h-full flex items-center"
+        className="relative w-full min-h-screen flex items-center"
       >
         <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-6 lg:px-12">
           <div
@@ -106,7 +102,7 @@ export function SectionCopy() {
 
       <section
         data-section="cta"
-        className="absolute inset-0 w-full h-full flex items-center"
+        className="relative w-full min-h-screen flex items-center"
       >
         <div className="relative z-[2] w-full max-w-[1280px] mx-auto px-6 lg:px-12">
           <div
@@ -144,63 +140,87 @@ export function SectionCopy() {
   );
 }
 
+interface SetupOpts {
+  frameState: { idx: number };
+  totalFrames: number;
+  onFrameUpdate: () => void;
+}
+
+interface SectionTimelines {
+  heroTl: ReturnType<typeof GsapType.timeline>;
+  valueTl: ReturnType<typeof GsapType.timeline>;
+  ctaTl: ReturnType<typeof GsapType.timeline>;
+}
+
 /**
- * setupCopyTweens — attaches the four crossfade tweens to a scrub-bound
- * master timeline. Positions per spec §3.1:
- *   0.31  hero copy fades out
- *   0.33  value copy fades in
- *   0.64  value copy fades out
- *   0.66  cta copy fades in
+ * setupSectionTimelines — builds three independent paused timelines (5s
+ * each). Each one fades in its copy block over the first ~0.6s, then runs
+ * the frame canvas tween from frame 1→`totalFrames` over 4s starting at
+ * 0.5s, leaving a brief tail for the section to settle before the next
+ * snap.
  *
- * Tween durations are 0.02 (2% of the unit-normalized timeline) so each
- * crossfade window is the spec's "narrow swap zone". The caller is
- * expected to set `tl.totalDuration(1)` after to lock the scrub mapping.
- *
- * `fromTo` (not `from`) is used for value/cta so the start state is
- * unambiguous and matches the SSR inline style — `from` would inherit
- * end-state from the (currently-hidden) DOM and produce a no-op.
+ * Returned timelines are paused; caller plays/restarts them via
+ * ScrollTrigger onEnter/onEnterBack.
  */
-export function setupCopyTweens(
+export function setupSectionTimelines(
   gsap: typeof GsapType,
-  tl: ReturnType<typeof GsapType.timeline>,
-) {
-  // Hero → Value boundary
-  tl.to(
-    '[data-section="hero"] [data-overlay="copy"]',
-    { opacity: 0, y: -16, ease: "power2.in", duration: 0.02 },
-    0.31,
-  );
-  tl.fromTo(
-    '[data-section="value"] [data-overlay="copy"]',
-    { opacity: 0, y: 16 },
-    { opacity: 1, y: 0, ease: "power2.out", duration: 0.02 },
-    0.33,
-  );
+  opts: SetupOpts,
+): SectionTimelines {
+  const { frameState, totalFrames, onFrameUpdate } = opts;
 
-  // Value → CTA boundary
-  tl.to(
-    '[data-section="value"] [data-overlay="copy"]',
-    { opacity: 0, y: -16, ease: "power2.in", duration: 0.02 },
-    0.64,
-  );
-  tl.fromTo(
-    '[data-section="cta"] [data-overlay="copy"]',
-    { opacity: 0, y: 16 },
-    { opacity: 1, y: 0, ease: "power2.out", duration: 0.02 },
-    0.66,
-  );
+  const heroTl = gsap.timeline({ paused: true });
+  heroTl
+    .from(
+      '[data-section="hero"] [data-overlay="copy"] .eyebrow',
+      { opacity: 0, y: 12, duration: 0.4, ease: "power2.out" },
+      0,
+    )
+    .from(
+      '[data-section="hero"] [data-overlay="copy"] h1',
+      { opacity: 0, y: 24, duration: 0.6, ease: "power2.out" },
+      0.15,
+    )
+    .from(
+      '[data-section="hero"] [data-overlay="copy"] p',
+      { opacity: 0, y: 16, duration: 0.5, ease: "power2.out" },
+      0.35,
+    )
+    .fromTo(
+      frameState,
+      { idx: 1 },
+      { idx: totalFrames, duration: 4, ease: "none", onUpdate: onFrameUpdate },
+      0.5,
+    );
 
-  // Anchor timeline's RAW duration at 1.0 by inserting a zero-duration
-  // tween at position 1.0. Both tl.totalDuration(1) and tl.duration(1)
-  // adjust via timeScale rather than extending the underlying duration,
-  // which leaves scrub-progress→tween-position mapping wrong: ScrollTrigger
-  // calls timeline.progress(scrollFrac) and progress() reads the raw
-  // duration, so without this anchor the natural duration is 0.68 (last
-  // tween at 0.66 + 0.02) and a tween at position 0.66 fires at scroll
-  // fraction 0.97. (PR #4 Bugbot HIGH 2026-04-29 — SectionCopy.tsx 192-195.)
-  tl.to({}, { duration: 0 }, 1);
+  const valueTl = gsap.timeline({ paused: true });
+  valueTl
+    .fromTo(
+      '[data-section="value"] [data-overlay="copy"]',
+      { opacity: 0, y: 24 },
+      { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" },
+      0.2,
+    )
+    .fromTo(
+      frameState,
+      { idx: 1 },
+      { idx: totalFrames, duration: 4, ease: "none", onUpdate: onFrameUpdate },
+      0.5,
+    );
 
-  // gsap reference is consumed solely for the type — keep it imported
-  // so a future direction change has access without re-threading args.
-  void gsap;
+  const ctaTl = gsap.timeline({ paused: true });
+  ctaTl
+    .fromTo(
+      '[data-section="cta"] [data-overlay="copy"]',
+      { opacity: 0, y: 24 },
+      { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" },
+      0.2,
+    )
+    .fromTo(
+      frameState,
+      { idx: 1 },
+      { idx: totalFrames, duration: 4, ease: "none", onUpdate: onFrameUpdate },
+      0.5,
+    );
+
+  return { heroTl, valueTl, ctaTl };
 }

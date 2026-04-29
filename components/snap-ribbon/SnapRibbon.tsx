@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useReducedMotion } from "framer-motion";
 import { BEATS, TOTAL_BEATS, TOTAL_SCENES } from "./beats";
+import { buildOverlayTimeline } from "./reveal";
+import { playHeroFrames, preloadFrames } from "./hero-frame-player";
 
 /**
  * SnapRibbon — gesture-claimed snap container.
@@ -96,6 +98,27 @@ export function SnapRibbon({ children }: Props) {
       ]);
       if (cancelled) return;
       gsap.registerPlugin(Observer);
+
+      // B1 enter — eyebrow + L1 rise in, hero frame plays f01→f07.
+      // Frames f01..f07 are preloaded in <head> via app/layout.tsx's
+      // <link rel="preload"> for the B1 range; the swap is a cache hit.
+      const heroImg = document.querySelector<HTMLImageElement>(
+        '[data-scene-content="hero"] [data-hero-img]',
+      );
+      const b1 = BEATS[0];
+      const b1Tl = buildOverlayTimeline(gsap, b1.overlays);
+      if (heroImg && b1.frameRange) {
+        // Fire-and-forget — frame cycle and overlay reveal run in parallel
+        // so the headline lands as the frame settles on f07.
+        playHeroFrames(heroImg, b1.frameRange[0], b1.frameRange[1]);
+      }
+      b1Tl.play();
+
+      // Defer-preload the rest of the hero frame range (f08..f27) after
+      // the B1 paint settles — keeps LCP bandwidth clean.
+      window.setTimeout(() => {
+        if (!cancelled) preloadFrames(8, 27);
+      }, 1500);
 
       observer = Observer.create({
         type: "wheel,touch,pointer",

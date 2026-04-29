@@ -188,7 +188,18 @@ export function setupSectionTimelines(
     .fromTo(
       frameState,
       { idx: 1 },
-      { idx: totalFrames, duration: 4, ease: "none", onUpdate: onFrameUpdate },
+      {
+        idx: totalFrames,
+        duration: 4,
+        ease: "none",
+        onUpdate: onFrameUpdate,
+        // GSAP 3 default overwrite is `false` — without this, fast scroll
+        // through sections leaves multiple frame tweens running on the
+        // shared frameState.idx and the canvas paints the wrong section's
+        // frame progression. `auto` kills any in-flight tween targeting
+        // the same property when a new restart fires.
+        overwrite: "auto",
+      },
       0.5,
     );
 
@@ -203,7 +214,18 @@ export function setupSectionTimelines(
     .fromTo(
       frameState,
       { idx: 1 },
-      { idx: totalFrames, duration: 4, ease: "none", onUpdate: onFrameUpdate },
+      {
+        idx: totalFrames,
+        duration: 4,
+        ease: "none",
+        onUpdate: onFrameUpdate,
+        // GSAP 3 default overwrite is `false` — without this, fast scroll
+        // through sections leaves multiple frame tweens running on the
+        // shared frameState.idx and the canvas paints the wrong section's
+        // frame progression. `auto` kills any in-flight tween targeting
+        // the same property when a new restart fires.
+        overwrite: "auto",
+      },
       0.5,
     );
 
@@ -218,7 +240,18 @@ export function setupSectionTimelines(
     .fromTo(
       frameState,
       { idx: 1 },
-      { idx: totalFrames, duration: 4, ease: "none", onUpdate: onFrameUpdate },
+      {
+        idx: totalFrames,
+        duration: 4,
+        ease: "none",
+        onUpdate: onFrameUpdate,
+        // GSAP 3 default overwrite is `false` — without this, fast scroll
+        // through sections leaves multiple frame tweens running on the
+        // shared frameState.idx and the canvas paints the wrong section's
+        // frame progression. `auto` kills any in-flight tween targeting
+        // the same property when a new restart fires.
+        overwrite: "auto",
+      },
       0.5,
     );
 

@@ -77,8 +77,12 @@ export function ScrollEngine() {
       gsap.registerPlugin(ScrollTrigger);
 
       // Shared frame-index state. Each section's timeline tweens this 1→60
-      // over 4s; gsap auto-overwrite handles the case where a new section
-      // restart fires while a previous tween is still in flight.
+      // over 4s. The frame tweens in setupSectionTimelines pass
+      // `overwrite: "auto"` explicitly so a new section's restart kills
+      // any in-flight tween from the previous section — without that,
+      // GSAP 3's default `overwrite: false` would let multiple tweens
+      // race on frameState.idx and the canvas would paint the wrong
+      // section's frame progression on fast scroll-back.
       const frameState = { idx: 1 };
       const drawFrameFromState = () => {
         fc?.drawFrame(Math.round(frameState.idx));

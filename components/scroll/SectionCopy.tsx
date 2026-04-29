@@ -13,8 +13,8 @@ import type { gsap as GsapType } from "gsap";
  * Architectural rules baked in (§5.2 / Appendix A):
  *  - Single pin owns the whole 1500% scrub; we contribute tweens to the
  *    caller's master timeline rather than creating our own ScrollTrigger.
- *  - No direction guards, no `played-once` flag, no `seenSections` Set.
- *  - No `addLabel()` calls — labels imply snap, v6 has no snap.
+ *  - No direction guards, no replay flag, no progress watermark Set.
+ *  - No timeline-label calls — labels imply snap, v6 has no snap.
  *  - Value/CTA copy initial state is hidden (opacity:0, y:16); SSR inline
  *    style matches so nothing flashes during hydrate.
  */

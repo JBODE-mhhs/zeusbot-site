@@ -134,8 +134,25 @@ body {
   border-radius: 2px;
 }
 
-/* Reduced motion — collapse all scroll/scrub/count-up/parallax to static */
+/* Section-snap container — sections are full-viewport snap targets, footer
+   is also a snap target so it stays reachable under `mandatory`. Native
+   browser scroll handles snap + iOS momentum; no Lenis, no GSAP-driven
+   smooth-scroll bridge (v6.1 — replaces the pin+scrub model that stuttered
+   under iPhone Safari touch-momentum scroll). */
+html {
+  scroll-snap-type: y mandatory;
+}
+[data-section],
+footer {
+  scroll-snap-align: start;
+}
+
+/* Reduced motion — collapse all scroll/scrub/count-up/parallax to static
+   AND release scroll-snap so the document scrolls freely. */
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-snap-type: none;
+  }
   *,
   *::before,
   *::after {
@@ -147,19 +164,14 @@ body {
 }
 
 /*
- * Reduced-motion structural fallback (scroll-choreography.md v5 §6).
+ * Reduced-motion structural fallback (scroll-choreography.md v6.1 §6.2).
  *
  * ScrollEngine sets `.rm` on <html> when prefers-reduced-motion is on.
- * Sections then render in normal flow (no pin, no h-screen lock); the
- * frame canvas hides; the static f15 poster takes over as the hero
- * backdrop; all overlays render at final state from SSR (already true
- * since v5 has no autoplay reveals).
+ * Sections already render in normal flow under v6.1 (sections are
+ * `relative min-h-screen`, no `absolute inset-0`), so .rm only needs to
+ * swap the frame canvas for the static f60 poster and reveal the hidden
+ * value/cta copy overlays.
  */
-.rm [data-section] {
-  height: auto;
-  min-height: 100vh;
-  padding: 4rem 0;
-}
 .rm [data-frame-canvas] {
   display: none;
 }
@@ -170,8 +182,8 @@ body {
   display: block !important;
   z-index: 0 !important;
 }
-.rm [data-beat][data-overlay],
+.rm [data-section] [data-overlay="copy"],
 .rm [data-anim] {
-  opacity: 1;
-  transform: none;
+  opacity: 1 !important;
+  transform: none !important;
 }

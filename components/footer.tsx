@@ -3,20 +3,12 @@ import { CONTACT_MAILTO } from "@/lib/constants";
 export function Footer() {
   return (
     <footer id="footer" className="border-t border-hairline mt-32">
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-[14px]">
+      <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-16 grid grid-cols-2 md:grid-cols-3 gap-8 text-[14px]">
         <div>
           <div className="font-display text-2xl text-sand mb-3">ZeusBot</div>
           <p className="font-display text-bronze-up text-[15px] leading-snug">
             A fleet, on a throne, in your business.
           </p>
-        </div>
-        <div>
-          <div className="eyebrow mb-3">Product</div>
-          <ul className="space-y-2 text-bronze-up">
-            <li><a href="#capabilities" className="hover:text-sand">Capabilities</a></li>
-            <li><a href="#how-it-works" className="hover:text-sand">How it works</a></li>
-            <li><a href="#pricing" className="hover:text-sand">Pricing</a></li>
-          </ul>
         </div>
         <div>
           <div className="eyebrow mb-3">Company</div>

@@ -1,38 +1,27 @@
 import { NavBar } from "@/components/nav-bar";
 import { Footer } from "@/components/footer";
 import { ScrollEngine } from "@/components/scroll/ScrollEngine";
-import { Hero } from "@/components/sections/hero";
-import { Capabilities } from "@/components/sections/capabilities";
-import { HowItWorks } from "@/components/sections/how-it-works";
-import { FleetStats } from "@/components/sections/fleet-stats";
-import { Pricing } from "@/components/sections/pricing";
-import { CtaClose } from "@/components/sections/cta-close";
+import { SectionCopy } from "@/components/scroll/SectionCopy";
 
 /**
- * Page composition (v5 — pin+scrub architecture).
+ * Page composition (v6.1 — section-snap + per-section play).
  *
- * 6 sections; each pins for 100vh or 300vh and scrubs its internal
- * cinematic via ScrollTrigger. The total pinned ribbon is 1000vh
- * (Hero 300 + Capabilities 100 + How 300 + Stats 100 + Pricing 100 + CTA 100);
- * snap pulls scroll to section anchors when scroll-velocity drops.
+ * Three sections (Hero / Value / CTA) participate in `scroll-snap-type: y
+ * mandatory` on `<html>`. Each section is `min-h-screen` and receives its
+ * own paused 5s timeline; ScrollTrigger fires onEnter/onEnterBack to
+ * `tl.restart()`. No pin, no scrub — animation runs at native 60fps
+ * regardless of scroll velocity (fixes iPhone Safari touch-momentum
+ * stuttering from v6 round 1-3).
  *
- * Frame canvas is global (z-0, fixed); driven by a single ScrollTrigger
- * in ScrollEngine that maps overall progress 0..1 onto frame indices 1..27.
- *
- * See orgs/zeus/shared/zeusbot-site/scroll-choreography.md (v5).
+ * Spec: orgs/zeus/shared/zeusbot-site/scroll-choreography.md (v6.1).
  */
 export default function Home() {
   return (
     <>
       <NavBar />
       <ScrollEngine />
-      <main className="relative">
-        <Hero />
-        <Capabilities />
-        <HowItWorks />
-        <FleetStats />
-        <Pricing />
-        <CtaClose />
+      <main className="relative w-full">
+        <SectionCopy />
       </main>
       <Footer />
     </>

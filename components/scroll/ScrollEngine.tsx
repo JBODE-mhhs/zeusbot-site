@@ -1,81 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FrameCanvas, type FrameCanvasHandle } from "./FrameCanvas";
-import { setupHeroPin } from "./HeroPin";
-import { setupCapabilitiesPin } from "./CapabilitiesPin";
-import { setupHowPin } from "./HowPin";
-import { setupStatsPin } from "./StatsPin";
-import { setupPricingPin } from "./PricingPin";
-import { setupCtaPin } from "./CtaPin";
 import {
-  SECTION_FRAME_RANGE,
-  SECTION_LABEL,
-  SECTION_ORDER,
-  SECTION_PIN_VH,
-} from "./scrimRecipes";
-
-const TOTAL_PIN_VH = SECTION_ORDER.reduce(
-  (acc, id) => acc + SECTION_PIN_VH[id],
-  0,
-);
+  FrameCanvas,
+  TOTAL_FRAMES,
+  type FrameCanvasHandle,
+} from "./FrameCanvas";
+import { setupSectionTimelines } from "./SectionCopy";
 
 /**
- * Cumulative progress thresholds — global progress 0..1 maps onto
- * section frame ranges by walking the section order and accumulating
- * pin lengths. Used by the frame-canvas global ScrollTrigger to pick
- * the right frame index for the current scroll position.
- */
-function buildFrameMap(): Array<{ from: number; to: number; frameFrom: number; frameTo: number }> {
-  const out: Array<{ from: number; to: number; frameFrom: number; frameTo: number }> = [];
-  let acc = 0;
-  for (const id of SECTION_ORDER) {
-    const span = SECTION_PIN_VH[id] / TOTAL_PIN_VH;
-    const [frameFrom, frameTo] = SECTION_FRAME_RANGE[id];
-    out.push({ from: acc, to: acc + span, frameFrom, frameTo });
-    acc += span;
-  }
-  return out;
-}
-
-const FRAME_MAP = buildFrameMap();
-
-function frameForGlobalProgress(p: number): number {
-  const clamped = Math.min(0.9999, Math.max(0, p));
-  for (const seg of FRAME_MAP) {
-    if (clamped >= seg.from && clamped < seg.to) {
-      const local = (clamped - seg.from) / (seg.to - seg.from);
-      const range = seg.frameTo - seg.frameFrom;
-      return seg.frameFrom + Math.round(local * range);
-    }
-  }
-  return FRAME_MAP[FRAME_MAP.length - 1].frameTo;
-}
-
-function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number) {
-  let t: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<T>) => {
-    if (t) clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
-  };
-}
-
-/**
- * ScrollEngine — single mount-once client component (§8.1). Initializes
- * Lenis + ScrollTrigger, registers per-section pin/scrub timelines,
- * the global frame-canvas ScrollTrigger, and the section-snap
- * ScrollTrigger. Owns full cleanup on unmount.
+ * ScrollEngine — single mount-once client component (v6.1 rewrite).
  *
- * Reduced motion: skip Lenis + skip ScrollTrigger entirely; sections
- * render in normal flow per globals.css `.rm` rules.
+ * Time-driven model: scroll progress controls *which section is in view*
+ * via `scroll-snap-type: y mandatory`. Each section owns its own paused
+ * 5s timeline; ScrollTrigger fires onEnter/onEnterBack to `tl.restart()`,
+ * so the animation plays at native 60fps regardless of scroll velocity.
+ *
+ * This replaces the v6 single-pin scrub model, which tied animation 1:1
+ * to scroll fraction and stuttered under iPhone Safari touch-momentum
+ * scroll (sub-pixel deltas → millisecond-by-millisecond stepping).
+ *
+ * Reduced motion: skip ScrollTrigger entirely, render f60 poster, sections
+ * in normal flow.
  */
+
 export function ScrollEngine() {
   const canvasRef = useRef<FrameCanvasHandle>(null);
-  // Canvas is client-only — keeps it out of SSR DOM so Lighthouse identifies
-  // the SSR <img data-frame-bg> as the unambiguous LCP candidate. Without this,
-  // the simulator picks the SSR canvas as the largest visible element and
-  // gates LCP on JS execution → drawFrame, which extends LCP to ~6s on mobile
-  // slow-4G + CPU 4x. The img is in SSR HTML, preloaded with high priority.
+  // Canvas is client-only — keeps it out of SSR DOM so Lighthouse
+  // identifies the SSR <img data-frame-bg> as the unambiguous LCP
+  // candidate.
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -98,163 +51,109 @@ export function ScrollEngine() {
     let cleanup: (() => void) | null = null;
 
     (async () => {
-      // Kick off f01 decode + lib imports in parallel — f01 is the LCP target
-      // (§7.1) and must paint inside the 2.5s budget. Earlier impl awaited a
-      // Promise.all over all 27 frames before first paint, which deferred the
-      // LCP candidate behind ~800 KB of decode and tripped Lighthouse §10/4.
       const fc = canvasRef.current;
       fc?.resize();
       const firstFramePromise = fc?.preloadFirstFrame() ?? Promise.resolve();
 
       const libsPromise = Promise.all([
-        import("lenis"),
         import("gsap"),
         import("gsap/ScrollTrigger"),
       ]);
 
-      // Paint f01 the moment it's decoded — independent of the lib imports.
+      // Paint f01 the moment it's decoded — independent of lib imports.
       firstFramePromise.then(() => {
         if (cancelled) return;
         fc?.drawFrame(1);
       });
 
-      const [
-        { default: Lenis },
-        { gsap },
-        { ScrollTrigger },
-      ] = await libsPromise;
-
+      const [{ gsap }, { ScrollTrigger }] = await libsPromise;
       if (cancelled) return;
 
-      // Make sure we've drawn f01 before any per-section ScrollTrigger
-      // refreshes (avoids a black-canvas flash if libs load before f01).
       await firstFramePromise;
       if (cancelled) return;
       fc?.drawFrame(1);
-
-      // Continue decoding f02..f27 in the background — fire-and-forget;
-      // ScrollEngine's frame-canvas ScrollTrigger guards on img.complete
-      // and skips the draw if a frame isn't ready yet.
       fc?.preloadRemainingFrames();
 
       gsap.registerPlugin(ScrollTrigger);
 
-      const lenis = new Lenis({
-        duration: 1.2,
-        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        wheelMultiplier: 1.0,
-        touchMultiplier: 1.5,
-        smoothWheel: true,
-      });
-
-      const onScroll = () => ScrollTrigger.update();
-      lenis.on("scroll", onScroll);
-
-      const tick = (time: number) => lenis.raf(time * 1000);
-      gsap.ticker.add(tick);
-      gsap.ticker.lagSmoothing(0);
-
-      // Per-section pins (registers ScrollTriggers; ordering matters because
-      // pin spacers stack vertically and later sections measure off earlier ones)
-      setupHeroPin(gsap, ScrollTrigger);
-      setupCapabilitiesPin(gsap, ScrollTrigger);
-      setupHowPin(gsap, ScrollTrigger);
-      setupStatsPin(gsap, ScrollTrigger);
-      setupPricingPin(gsap, ScrollTrigger);
-      setupCtaPin(gsap, ScrollTrigger);
-
-      // Global frame-canvas ScrollTrigger — drives drawFrame from overall
-      // page progress (covers the entire pinned ribbon range). Uses `%` to
-      // match per-section pins (`+=100%` per section); GSAP ScrollTrigger
-      // documents `%` as the supported viewport unit in `+=` — `vh` was
-      // ambiguous and Bugbot 04b2628 flagged risk of pixel-parse compression.
-      ScrollTrigger.create({
-        trigger: "main",
-        start: "top top",
-        end: () => `+=${TOTAL_PIN_VH}%`,
-        scrub: true,
-        onUpdate: (self) => {
-          if (!fc) return;
-          fc.drawFrame(frameForGlobalProgress(self.progress));
-        },
-      });
-
-      // Section-snap ScrollTrigger — labels at each section's top:top
-      // (registered via the per-section ScrollTriggers above). We also
-      // surface a status string for screen readers and visual debugging.
-      const statusEl = document.querySelector<HTMLElement>(
-        "[data-section-status]",
-      );
-
-      // aria-live status updates fire on BOTH scroll directions — v4 parity
-      // (setSectionStatusIdx in playSectionTransition was direction-agnostic).
-      // Without onEnterBack, scrolling backward leaves the status text stale,
-      // an a11y regression flagged by Bugbot on 04b2628.
-      const setStatus = (id: keyof typeof SECTION_LABEL, idx: number) => {
-        if (!statusEl) return;
-        statusEl.textContent = `Section ${idx + 1} of ${SECTION_ORDER.length}: ${SECTION_LABEL[id]}`;
+      // Shared frame-index state. Each section's timeline tweens this 1→60
+      // over 4s. The frame tweens in setupSectionTimelines pass
+      // `overwrite: "auto"` explicitly so a new section's restart kills
+      // any in-flight tween from the previous section — without that,
+      // GSAP 3's default `overwrite: false` would let multiple tweens
+      // race on frameState.idx and the canvas would paint the wrong
+      // section's frame progression on fast scroll-back.
+      const frameState = { idx: 1 };
+      const drawFrameFromState = () => {
+        fc?.drawFrame(Math.round(frameState.idx));
       };
 
-      SECTION_ORDER.forEach((id, idx) => {
-        const el = document.querySelector(`[data-section="${id}"]`);
-        if (!el) return;
-        ScrollTrigger.create({
-          trigger: el as HTMLElement,
-          start: "top top",
-          onEnter: () => setStatus(id, idx),
-          onEnterBack: () => setStatus(id, idx),
-        });
+      // Build three paused per-section timelines.
+      const { heroTl, valueTl, ctaTl } = setupSectionTimelines(gsap, {
+        frameState,
+        totalFrames: TOTAL_FRAMES,
+        onFrameUpdate: drawFrameFromState,
       });
 
-      // Snap pulls scroll-velocity-aware to nearest section anchor.
-      // Disabled on touch-only devices (ScrollTrigger.isTouch === 1):
-      // iOS WebKit momentum + Lenis touchMultiplier + snap-inertia race
-      // produces short-flick snap-back and big-flick overshoot.
-      // Desktop (0) and hybrid touch+mouse laptops (2) keep snap.
-      if (ScrollTrigger.isTouch !== 1) {
-        ScrollTrigger.create({
-          trigger: "main",
-          start: "top top",
-          end: () => `+=${TOTAL_PIN_VH}%`,
-          snap: {
-            snapTo: (progress) => {
-              // Snap to each section's start as a fraction of total pin length
-              const anchors: number[] = [];
-              let acc = 0;
-              for (const id of SECTION_ORDER) {
-                anchors.push(acc / TOTAL_PIN_VH);
-                acc += SECTION_PIN_VH[id];
-              }
-              anchors.push(1);
-              return anchors.reduce((nearest, cur) =>
-                Math.abs(cur - progress) < Math.abs(nearest - progress)
-                  ? cur
-                  : nearest,
-              );
-            },
-            duration: { min: 0.4, max: 0.8 },
-            ease: "expo.out",
-            delay: 0.1,
-            inertia: true,
-          },
+      // Hero: play on mount (the page lands at top, hero is in view).
+      // No onEnter ScrollTrigger needed for first paint — heroTl.play()
+      // here is the native trigger.
+      heroTl.play();
+
+      // Per-section ScrollTriggers for replay-on-revisit.
+      const heroST = ScrollTrigger.create({
+        trigger: '[data-section="hero"]',
+        start: "top center",
+        end: "bottom center",
+        onEnter: () => heroTl.restart(),
+        onEnterBack: () => heroTl.restart(),
+      });
+      const valueST = ScrollTrigger.create({
+        trigger: '[data-section="value"]',
+        start: "top center",
+        end: "bottom center",
+        onEnter: () => valueTl.restart(),
+        onEnterBack: () => valueTl.restart(),
+      });
+      const ctaST = ScrollTrigger.create({
+        trigger: '[data-section="cta"]',
+        start: "top center",
+        end: "bottom center",
+        onEnter: () => ctaTl.restart(),
+        onEnterBack: () => ctaTl.restart(),
+      });
+
+      // Probe diagnostics — gated to non-production builds.
+      if (process.env.NODE_ENV !== "production") {
+        console.log("[zeus-v6.1] section timelines OK", {
+          triggers: ScrollTrigger.getAll().length,
+          heroDuration: heroTl.duration(),
+          valueDuration: valueTl.duration(),
+          ctaDuration: ctaTl.duration(),
         });
       }
 
-      // Resize handling: debounced canvas resize + ScrollTrigger.refresh
-      const onResize = debounce(() => {
-        fc?.resize();
-        ScrollTrigger.refresh();
-      }, 200);
-      window.addEventListener("resize", onResize);
+      const onResize = () => ScrollTrigger.refresh();
+      let resizeT: ReturnType<typeof setTimeout> | null = null;
+      const onResizeDebounced = () => {
+        if (resizeT) clearTimeout(resizeT);
+        resizeT = setTimeout(() => {
+          fc?.resize();
+          onResize();
+        }, 200);
+      };
+      window.addEventListener("resize", onResizeDebounced);
 
       ScrollTrigger.refresh();
 
       cleanup = () => {
-        window.removeEventListener("resize", onResize);
-        ScrollTrigger.getAll().forEach((t) => t.kill());
-        gsap.ticker.remove(tick);
-        lenis.off("scroll", onScroll);
-        lenis.destroy();
+        window.removeEventListener("resize", onResizeDebounced);
+        heroST.kill();
+        valueST.kill();
+        ctaST.kill();
+        heroTl.kill();
+        valueTl.kill();
+        ctaTl.kill();
       };
     })();
 
@@ -266,16 +165,11 @@ export function ScrollEngine() {
 
   return (
     <>
-      {/* SSR f01 backdrop — LCP candidate. Sits at z:0 under the canvas
-          (canvas is z:1, transparent until first paint). The browser paints
-          this image as soon as f01-720.webp decodes (preloaded with
-          fetchpriority:high in app/layout.tsx <head>), well before the
-          ScrollEngine effect hydrates — keeping LCP under the §7.1 budget.
-          .rm hides this and shows data-frame-poster (f15) instead. */}
+      {/* SSR f01 backdrop — LCP candidate. */}
       <img
         data-frame-bg
-        src="/frames/f01-720.webp"
-        srcSet="/frames/f01-720.webp 720w, /frames/f01-1080.webp 1080w, /frames/f01.webp 1440w"
+        src="/frames/f001-720.webp"
+        srcSet="/frames/f001-720.webp 720w, /frames/f001-1080.webp 1080w, /frames/f001.webp 1440w"
         sizes="100vw"
         alt=""
         aria-hidden
@@ -290,11 +184,11 @@ export function ScrollEngine() {
         }}
       />
       {mounted && <FrameCanvas ref={canvasRef} />}
-      {/* Reduced-motion poster (f15 — most informative hero frame per §6). */}
+      {/* Reduced-motion poster — f180 (final frame of 12fps×15s clip). */}
       <img
         data-frame-poster
-        src="/frames/f15-720.webp"
-        srcSet="/frames/f15-720.webp 720w, /frames/f15-1080.webp 1080w, /frames/f15.webp 1440w"
+        src="/frames/f180-720.webp"
+        srcSet="/frames/f180-720.webp 720w, /frames/f180-1080.webp 1080w, /frames/f180.webp 1440w"
         sizes="100vw"
         alt=""
         aria-hidden
@@ -309,8 +203,6 @@ export function ScrollEngine() {
           pointerEvents: "none",
         }}
       />
-      {/* sr-only section status for screen readers (snap announce) */}
-      <div data-section-status className="sr-only" aria-live="polite" />
     </>
   );
 }

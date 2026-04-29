@@ -8,23 +8,24 @@ import { forwardRef, useImperativeHandle, useRef } from "react";
  * v6 §2.0 + §3.4 (canvas, not <img>.src mutation — sub-millisecond GPU-blit on
  * every scroll-tick avoids the 60Hz decode-storm that <img>.src= produces).
  *
- * v6 spec: 60 WebP frames at q72/q75/q80 srcset (720/1080/1440). Preloaded
- * into Image() objects on mount; drawFrame(idx) is called from ScrollEngine's
- * single +=1500% pin ScrollTrigger and short-circuits when idx unchanged
- * (§3.4 — avoids GPU spam during pin idle).
+ * v6.1 spec: 180 WebP frames at q72/q76/q80 srcset (720/1080/1440), 12fps
+ * × 15s source partitioned 60/60/60 across hero/value/cta. Preloaded into
+ * Image() objects on mount; drawFrame(idx) is called from each section's
+ * paused timeline via gsap onUpdate and short-circuits when idx unchanged
+ * (§3.4 — avoids GPU spam between ticks).
  */
 
-export const TOTAL_FRAMES = 60;
+export const TOTAL_FRAMES = 180;
 
 const frameHref = (i: number, breakpoint: 720 | 1080 | 1440) => {
-  const n = String(i).padStart(2, "0");
+  const n = String(i).padStart(3, "0");
   return breakpoint === 1440
     ? `/frames/f${n}.webp`
     : `/frames/f${n}-${breakpoint}.webp`;
 };
 
 const frameSrcSet = (i: number) => {
-  const n = String(i).padStart(2, "0");
+  const n = String(i).padStart(3, "0");
   return `/frames/f${n}-720.webp 720w, /frames/f${n}-1080.webp 1080w, /frames/f${n}.webp 1440w`;
 };
 

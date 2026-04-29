@@ -168,8 +168,8 @@ export function ScrollEngine() {
       {/* SSR f01 backdrop — LCP candidate. */}
       <img
         data-frame-bg
-        src="/frames/f01-720.webp"
-        srcSet="/frames/f01-720.webp 720w, /frames/f01-1080.webp 1080w, /frames/f01.webp 1440w"
+        src="/frames/f001-720.webp"
+        srcSet="/frames/f001-720.webp 720w, /frames/f001-1080.webp 1080w, /frames/f001.webp 1440w"
         sizes="100vw"
         alt=""
         aria-hidden
@@ -184,11 +184,11 @@ export function ScrollEngine() {
         }}
       />
       {mounted && <FrameCanvas ref={canvasRef} />}
-      {/* Reduced-motion poster — f60. */}
+      {/* Reduced-motion poster — f180 (final frame of 12fps×15s clip). */}
       <img
         data-frame-poster
-        src="/frames/f60-720.webp"
-        srcSet="/frames/f60-720.webp 720w, /frames/f60-1080.webp 1080w, /frames/f60.webp 1440w"
+        src="/frames/f180-720.webp"
+        srcSet="/frames/f180-720.webp 720w, /frames/f180-1080.webp 1080w, /frames/f180.webp 1440w"
         sizes="100vw"
         alt=""
         aria-hidden

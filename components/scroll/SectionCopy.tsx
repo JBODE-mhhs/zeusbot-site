@@ -158,12 +158,12 @@ interface SectionTimelines {
  * the frame canvas tween over 4s starting at 0.5s, leaving a brief tail
  * for the section to settle before the next snap.
  *
- * The 60-frame source is partitioned 20/20/20 across sections so the user
- * sees a contiguous 15s storyline (3×5s) instead of three replays of the
- * full clip:
- *   hero  → frames 1–20
- *   value → frames 21–40
- *   cta   → frames 41–60
+ * The 180-frame source (12fps × 15s, post Bode "less choppy" pass) is
+ * partitioned 60/60/60 across sections so the user sees a contiguous 15s
+ * storyline (3×5s @ 12fps) instead of three replays of the full clip:
+ *   hero  → frames 1–60    (0.0s – 5.0s of source)
+ *   value → frames 61–120  (5.0s – 10.0s of source)
+ *   cta   → frames 121–180 (10.0s – 15.0s of source)
  *
  * Returned timelines are paused; caller plays/restarts them via
  * ScrollTrigger onEnter/onEnterBack.
@@ -175,12 +175,12 @@ export function setupSectionTimelines(
   const { frameState, onFrameUpdate } = opts;
 
   // Per-section frame ranges — see JSDoc above. `totalFrames` is still on
-  // the SetupOpts shape (callers pass TOTAL_FRAMES=60) but the per-section
+  // the SetupOpts shape (callers pass TOTAL_FRAMES=180) but the per-section
   // ranges are explicit constants so the partition is audit-friendly and
   // doesn't silently shift if total frame count ever changes.
-  const HERO_RANGE = { start: 1, end: 20 };
-  const VALUE_RANGE = { start: 21, end: 40 };
-  const CTA_RANGE = { start: 41, end: 60 };
+  const HERO_RANGE = { start: 1, end: 60 };
+  const VALUE_RANGE = { start: 61, end: 120 };
+  const CTA_RANGE = { start: 121, end: 180 };
 
   const heroTl = gsap.timeline({ paused: true });
   heroTl

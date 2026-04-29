@@ -27,7 +27,7 @@ const VARIANTS = [
   { suffix: "-1080", width: 1080, quality: 76 },
 ];
 
-const SOURCE_RE = /^f(\d{2})\.webp$/;
+const SOURCE_RE = /^f(\d{3})\.webp$/;
 
 async function main() {
   const all = await readdir(FRAMES_DIR);

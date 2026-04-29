@@ -183,17 +183,23 @@ export function ScrollEngine() {
         "[data-section-status]",
       );
 
+      // aria-live status updates fire on BOTH scroll directions — v4 parity
+      // (setSectionStatusIdx in playSectionTransition was direction-agnostic).
+      // Without onEnterBack, scrolling backward leaves the status text stale,
+      // an a11y regression flagged by Bugbot on 04b2628.
+      const setStatus = (id: keyof typeof SECTION_LABEL, idx: number) => {
+        if (!statusEl) return;
+        statusEl.textContent = `Section ${idx + 1} of ${SECTION_ORDER.length}: ${SECTION_LABEL[id]}`;
+      };
+
       SECTION_ORDER.forEach((id, idx) => {
         const el = document.querySelector(`[data-section="${id}"]`);
         if (!el) return;
         ScrollTrigger.create({
           trigger: el as HTMLElement,
           start: "top top",
-          onEnter: () => {
-            if (statusEl) {
-              statusEl.textContent = `Section ${idx + 1} of ${SECTION_ORDER.length}: ${SECTION_LABEL[id]}`;
-            }
-          },
+          onEnter: () => setStatus(id, idx),
+          onEnterBack: () => setStatus(id, idx),
         });
       });
 

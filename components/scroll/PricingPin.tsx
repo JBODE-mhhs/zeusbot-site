@@ -29,8 +29,12 @@ export function setupPricingPin(
     },
   });
 
+  // All 3 tier cards rise at p=0.10/0.15/0.20 (Atelier + Forge + Pantheon).
+  // The featured tier matches both selectors so it gets the rise AND the
+  // scale tween below — without the union selector, the featured tier
+  // would skip the rise entirely (Bugbot 04b2628).
   tl.from(
-    '[data-section="pricing"] [data-anim="tier"]',
+    '[data-section="pricing"] [data-anim="tier"], [data-section="pricing"] [data-anim="tier-featured"]',
     { y: 28, opacity: 0, duration: 0.08, stagger: 0.05 },
     0.10,
   );

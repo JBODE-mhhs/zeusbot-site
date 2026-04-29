@@ -13,8 +13,10 @@ import { setupSectionTimelines } from "./SectionCopy";
  *
  * Time-driven model: scroll progress controls *which section is in view*
  * via `scroll-snap-type: y mandatory`. Each section owns its own paused
- * 5s timeline; ScrollTrigger fires onEnter/onEnterBack to `tl.restart()`,
- * so the animation plays at native 60fps regardless of scroll velocity.
+ * 5s timeline; ScrollTrigger fires onEnter (scroll-down) → `tl.restart()`
+ * for forward play, and onEnterBack (scroll-up) → `tl.progress(1).reverse()`
+ * for end-to-start rewind. Both directions play at native 60fps regardless
+ * of scroll velocity.
  *
  * This replaces the v6 single-pin scrub model, which tied animation 1:1
  * to scroll fraction and stuttered under iPhone Safari touch-momentum
@@ -101,26 +103,31 @@ export function ScrollEngine() {
       heroTl.play();
 
       // Per-section ScrollTriggers for replay-on-revisit.
+      // Scroll-down (onEnter) plays forward from frame 0; scroll-up (onEnterBack)
+      // rewinds end→start. progress(1) seeds the playhead at the end first so
+      // reverse() actually plays backward even when the user scroll-skipped past
+      // the section without ever reaching its end (Bode iPhone-real 2026-04-29
+      // 17:58Z — "scroll up should rewind, not restart").
       const heroST = ScrollTrigger.create({
         trigger: '[data-section="hero"]',
         start: "top center",
         end: "bottom center",
         onEnter: () => heroTl.restart(),
-        onEnterBack: () => heroTl.restart(),
+        onEnterBack: () => { heroTl.progress(1); heroTl.reverse(); },
       });
       const valueST = ScrollTrigger.create({
         trigger: '[data-section="value"]',
         start: "top center",
         end: "bottom center",
         onEnter: () => valueTl.restart(),
-        onEnterBack: () => valueTl.restart(),
+        onEnterBack: () => { valueTl.progress(1); valueTl.reverse(); },
       });
       const ctaST = ScrollTrigger.create({
         trigger: '[data-section="cta"]',
         start: "top center",
         end: "bottom center",
         onEnter: () => ctaTl.restart(),
-        onEnterBack: () => ctaTl.restart(),
+        onEnterBack: () => { ctaTl.progress(1); ctaTl.reverse(); },
       });
 
       // Probe diagnostics — gated to non-production builds.

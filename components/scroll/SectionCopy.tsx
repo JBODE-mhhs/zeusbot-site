@@ -4,8 +4,9 @@ import type { gsap as GsapType } from "gsap";
  * SectionCopy — three scroll-anchored copy blocks (Hero / Value / CTA) per
  * scroll-choreography.md v6.1. Each section is a normal-flow `min-h-screen`
  * block participating in `scroll-snap-type: y mandatory`. ScrollTrigger
- * fires onEnter/onEnterBack to play the section's paused 5s timeline
- * (`tl.restart()`); native scroll handles snap and momentum.
+ * fires onEnter (scroll-down → `tl.restart()`) and onEnterBack
+ * (scroll-up → `tl.progress(1).reverse()`); native scroll handles snap
+ * and momentum.
  *
  * No `absolute inset-0` overlay — sections stack vertically, and only one
  * is in viewport at a time courtesy of scroll-snap.
@@ -165,8 +166,9 @@ interface SectionTimelines {
  *   value → frames 61–120  (5.0s – 10.0s of source)
  *   cta   → frames 121–180 (10.0s – 15.0s of source)
  *
- * Returned timelines are paused; caller plays/restarts them via
- * ScrollTrigger onEnter/onEnterBack.
+ * Returned timelines are paused; the caller restarts forward on
+ * ScrollTrigger onEnter and rewinds end→start on onEnterBack
+ * (`progress(1).reverse()`).
  */
 export function setupSectionTimelines(
   gsap: typeof GsapType,

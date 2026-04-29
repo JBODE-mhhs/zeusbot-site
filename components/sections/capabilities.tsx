@@ -1,10 +1,7 @@
-"use client";
-
 import Image from "next/image";
-import { motion } from "framer-motion";
 import { Mail, Code, Paintbrush, Receipt, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { easeOut } from "@/lib/motion";
+import { SCRIM_RECIPES } from "@/components/scroll/scrimRecipes";
 
 type Capability = {
   icon: LucideIcon;
@@ -41,21 +38,21 @@ const SECONDARY: Capability[] = [
   },
 ];
 
-const FADE_RISE = {
-  initial: { opacity: 0, y: 24 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, margin: "-80px" },
-  transition: { duration: 0.7, ease: easeOut },
-};
-
 export function Capabilities() {
   return (
     <section
+      data-section="capabilities"
       id="capabilities"
-      className="py-32 lg:py-40 border-t border-hairline"
+      className="relative h-screen w-full overflow-hidden"
     >
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-12">
-        <motion.div {...FADE_RISE} className="mb-16 max-w-2xl">
+      <div
+        data-scrim
+        aria-hidden
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{ background: SCRIM_RECIPES.capabilities }}
+      />
+      <div className="relative z-[2] h-full max-w-[1280px] mx-auto px-6 lg:px-12 flex flex-col justify-center py-24">
+        <div className="mb-12 max-w-2xl">
           <span className="eyebrow">CAPABILITIES</span>
           <h2
             className="font-display text-sand mt-3"
@@ -63,12 +60,11 @@ export function Capabilities() {
           >
             What the fleet does.
           </h2>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Featured (cols 1-7) */}
-          <motion.article
-            {...FADE_RISE}
+          <article
+            data-anim="card-featured"
             className="lg:col-span-7 bg-ink-warm rounded-2xl border border-hairline p-8 lg:p-10 flex flex-col gap-6 relative overflow-hidden"
           >
             <FEATURED.icon
@@ -85,7 +81,7 @@ export function Capabilities() {
             </h3>
             <p className="text-sand/80 max-w-md">{FEATURED.body}</p>
 
-            <div className="mt-6 aspect-[16/10] rounded-xl border border-hairline-up bg-ink-deep relative overflow-hidden">
+            <div className="mt-2 aspect-[16/10] rounded-xl border border-hairline-up bg-ink-deep relative overflow-hidden">
               <Image
                 src="/capability-featured.webp"
                 alt="Molten-gold figure forging an artifact at a Greek-revival forge"
@@ -94,21 +90,13 @@ export function Capabilities() {
                 className="object-cover"
               />
             </div>
-          </motion.article>
+          </article>
 
-          {/* Secondary stack (cols 8-12) */}
           <div className="lg:col-span-5 grid gap-4">
-            {SECONDARY.map((cap, i) => (
-              <motion.article
+            {SECONDARY.map((cap) => (
+              <article
                 key={cap.headline}
-                initial={{ opacity: 0, y: 18 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                transition={{
-                  duration: 0.6,
-                  delay: i * 0.08,
-                  ease: easeOut,
-                }}
+                data-anim="card-secondary"
                 className="bg-ink-warm rounded-2xl border border-hairline p-6 flex gap-4 hover:border-hairline-up transition-colors"
               >
                 <cap.icon
@@ -124,7 +112,7 @@ export function Capabilities() {
                     {cap.body}
                   </p>
                 </div>
-              </motion.article>
+              </article>
             ))}
           </div>
         </div>

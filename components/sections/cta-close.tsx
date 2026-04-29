@@ -1,70 +1,45 @@
-"use client";
-
-import { motion } from "framer-motion";
-import { easeOut } from "@/lib/motion";
 import { buttonVariants } from "@/components/ui/button";
 import { CONTACT_MAILTO } from "@/lib/constants";
+import { SCRIM_RECIPES } from "@/components/scroll/scrimRecipes";
 
-/**
- * CTA close — the cathedral close. Echo the hero, but resolved.
- * Full-bleed bg = frame_end.png (Zeus reaching, hands extended), heavily
- * darkened. Single centered text block, single CTA. (design-spec §3.6)
- */
 export function CtaClose() {
   return (
     <section
+      data-section="cta"
       id="cta"
-      className="relative py-40 lg:py-56 overflow-hidden border-t border-hairline"
+      className="relative h-screen w-full overflow-hidden"
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/bg-cta-close.webp"
-        alt=""
-        aria-hidden
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 -z-10 w-full h-full object-cover"
-        style={{ backgroundColor: "var(--ink-deep)" }}
-      />
       <div
-        className="absolute inset-0 -z-10"
-        style={{
-          background:
-            "linear-gradient(180deg, var(--ink-deep) 0%, rgba(25,12,12,0.55) 35%, rgba(25,12,12,0.85) 100%)",
-        }}
+        data-scrim
         aria-hidden
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{ background: SCRIM_RECIPES.cta }}
       />
-
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-12 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.8, ease: easeOut }}
+      <div className="relative z-[2] h-full max-w-[1280px] mx-auto px-6 lg:px-12 flex flex-col items-center justify-center text-center py-24">
+        <h2
+          className="font-display text-sand mb-6"
+          style={{
+            fontSize: "var(--display)",
+            lineHeight: 1.05,
+            textShadow: "0 1px 24px rgba(0,0,0,0.6)",
+          }}
         >
-          <h2
-            className="font-display text-sand mb-6"
-            style={{
-              fontSize: "var(--display)",
-              lineHeight: 1.05,
-              textShadow: "0 1px 24px rgba(0,0,0,0.6)",
-            }}
-          >
-            Send the work.
-          </h2>
-          <p
-            className="text-sand/85 max-w-xl mx-auto mb-10"
-            style={{ textShadow: "0 1px 12px rgba(0,0,0,0.5)" }}
-          >
-            One conversation, a full fleet at your back, the work moves.
-          </p>
-          <a
-            href={CONTACT_MAILTO}
-            className={buttonVariants({ variant: "primary", size: "lg" })}
-          >
-            Request demo
-          </a>
-        </motion.div>
+          Send the work.
+        </h2>
+        <p
+          data-anim="cta-sub"
+          className="text-sand/85 max-w-xl mx-auto mb-10"
+          style={{ textShadow: "0 1px 12px rgba(0,0,0,0.5)" }}
+        >
+          One conversation, a full fleet at your back, the work moves.
+        </p>
+        <a
+          data-anim="cta-primary"
+          href={CONTACT_MAILTO}
+          className={buttonVariants({ variant: "primary", size: "lg" })}
+        >
+          Request demo
+        </a>
       </div>
     </section>
   );

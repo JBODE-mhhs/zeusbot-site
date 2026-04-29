@@ -1,15 +1,7 @@
-"use client";
-
-import { motion } from "framer-motion";
-import { easeOut } from "@/lib/motion";
 import { buttonVariants } from "@/components/ui/button";
 import { CONTACT_MAILTO } from "@/lib/constants";
+import { SCRIM_RECIPES } from "@/components/scroll/scrimRecipes";
 
-/**
- * Pricing — locked tiers per content-locks.md (LOCKED 2026-04-28 by Bode).
- * Deposit fixed at $5,000 across every tier; only monthly varies.
- * Forge is the default (gold border).
- */
 type Tier = {
   name: string;
   setup: string;
@@ -47,17 +39,18 @@ const TIERS: Tier[] = [
 export function Pricing() {
   return (
     <section
+      data-section="pricing"
       id="pricing"
-      className="py-32 lg:py-40 border-t border-hairline"
+      className="relative h-screen w-full overflow-hidden"
     >
-      <div className="max-w-[1280px] mx-auto px-6 lg:px-12">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7, ease: easeOut }}
-          className="mb-16 max-w-2xl"
-        >
+      <div
+        data-scrim
+        aria-hidden
+        className="absolute inset-0 z-[1] pointer-events-none"
+        style={{ background: SCRIM_RECIPES.pricing }}
+      />
+      <div className="relative z-[2] h-full max-w-[1280px] mx-auto px-6 lg:px-12 flex flex-col justify-center py-24">
+        <div className="mb-12 max-w-2xl">
           <span className="eyebrow">PRICING</span>
           <h2
             className="font-display text-sand mt-3"
@@ -69,20 +62,13 @@ export function Pricing() {
             Every fleet starts with a $5,000 onboarding. The monthly is what
             scales with you.
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {TIERS.map((tier, i) => (
-            <motion.div
+          {TIERS.map((tier) => (
+            <div
               key={tier.name}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{
-                duration: 0.7,
-                delay: i * 0.08,
-                ease: easeOut,
-              }}
+              data-anim={tier.highlighted ? "tier-featured" : "tier"}
               className={`relative rounded-2xl bg-ink-warm p-8 flex flex-col gap-4 transition-transform duration-[var(--dur-soft)] ease-[var(--ease-out)] hover:-translate-y-2 ${
                 tier.highlighted
                   ? "border-2 border-gold-orb shadow-[var(--elev-orb)]"
@@ -126,7 +112,7 @@ export function Pricing() {
               >
                 Request demo
               </a>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

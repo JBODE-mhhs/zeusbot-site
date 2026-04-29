@@ -207,34 +207,38 @@ export function ScrollEngine() {
       });
 
       // Snap pulls scroll-velocity-aware to nearest section anchor.
-      // labelsDirectional honors scroll direction; `inertia: true` lets
-      // Lenis inertia settle before the snap pulls.
-      ScrollTrigger.create({
-        trigger: "main",
-        start: "top top",
-        end: () => `+=${TOTAL_PIN_VH}%`,
-        snap: {
-          snapTo: (progress) => {
-            // Snap to each section's start as a fraction of total pin length
-            const anchors: number[] = [];
-            let acc = 0;
-            for (const id of SECTION_ORDER) {
-              anchors.push(acc / TOTAL_PIN_VH);
-              acc += SECTION_PIN_VH[id];
-            }
-            anchors.push(1);
-            return anchors.reduce((nearest, cur) =>
-              Math.abs(cur - progress) < Math.abs(nearest - progress)
-                ? cur
-                : nearest,
-            );
+      // Disabled on touch-only devices (ScrollTrigger.isTouch === 1):
+      // iOS WebKit momentum + Lenis touchMultiplier + snap-inertia race
+      // produces short-flick snap-back and big-flick overshoot.
+      // Desktop (0) and hybrid touch+mouse laptops (2) keep snap.
+      if (ScrollTrigger.isTouch !== 1) {
+        ScrollTrigger.create({
+          trigger: "main",
+          start: "top top",
+          end: () => `+=${TOTAL_PIN_VH}%`,
+          snap: {
+            snapTo: (progress) => {
+              // Snap to each section's start as a fraction of total pin length
+              const anchors: number[] = [];
+              let acc = 0;
+              for (const id of SECTION_ORDER) {
+                anchors.push(acc / TOTAL_PIN_VH);
+                acc += SECTION_PIN_VH[id];
+              }
+              anchors.push(1);
+              return anchors.reduce((nearest, cur) =>
+                Math.abs(cur - progress) < Math.abs(nearest - progress)
+                  ? cur
+                  : nearest,
+              );
+            },
+            duration: { min: 0.4, max: 0.8 },
+            ease: "expo.out",
+            delay: 0.1,
+            inertia: true,
           },
-          duration: { min: 0.4, max: 0.8 },
-          ease: "expo.out",
-          delay: 0.1,
-          inertia: true,
-        },
-      });
+        });
+      }
 
       // Resize handling: debounced canvas resize + ScrollTrigger.refresh
       const onResize = debounce(() => {

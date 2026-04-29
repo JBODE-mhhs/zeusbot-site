@@ -91,7 +91,7 @@ export function HowItWorks() {
                   height={800}
                   sizes="(max-width: 1024px) 100vw, 50vw"
                   className="absolute inset-0 w-full h-full object-cover"
-                  priority={i === 0}
+                  loading="lazy"
                 />
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-ink-deep/80 to-transparent">
                   <span

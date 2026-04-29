@@ -2,7 +2,7 @@ import { CONTACT_MAILTO } from "@/lib/constants";
 
 export function Footer() {
   return (
-    <footer className="border-t border-hairline mt-32">
+    <footer id="footer" className="border-t border-hairline mt-32">
       <div className="max-w-[1280px] mx-auto px-6 lg:px-12 py-16 grid grid-cols-2 md:grid-cols-4 gap-8 text-[14px]">
         <div>
           <div className="font-display text-2xl text-sand mb-3">ZeusBot</div>

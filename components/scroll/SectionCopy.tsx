@@ -246,12 +246,12 @@ export function setupSectionTimelines(
         duration: 4,
         ease: "none",
         onUpdate: onFrameUpdate,
-        // GSAP 3 default overwrite is `false` — without this, fast scroll
-        // through sections leaves multiple frame tweens running on the
-        // shared frameState.idx and the canvas paints the wrong section's
-        // frame progression. `auto` kills any in-flight tween targeting
-        // the same property when a new restart fires.
         overwrite: "auto",
+        // Prevent GSAP from applying the FROM state at tween-construction
+        // time. Without this, constructing later timelines (valueTl etc.)
+        // overwrites frameState.idx before heroTl.play() even runs,
+        // causing the wrong frame to paint on initial load.
+        immediateRender: false,
       },
       0.5,
     );
@@ -272,12 +272,8 @@ export function setupSectionTimelines(
         duration: 4,
         ease: "none",
         onUpdate: onFrameUpdate,
-        // GSAP 3 default overwrite is `false` — without this, fast scroll
-        // through sections leaves multiple frame tweens running on the
-        // shared frameState.idx and the canvas paints the wrong section's
-        // frame progression. `auto` kills any in-flight tween targeting
-        // the same property when a new restart fires.
         overwrite: "auto",
+        immediateRender: false,
       },
       0.5,
     );
@@ -299,6 +295,7 @@ export function setupSectionTimelines(
         ease: "none",
         onUpdate: onFrameUpdate,
         overwrite: "auto",
+        immediateRender: false,
       },
       0.5,
     );
@@ -320,6 +317,7 @@ export function setupSectionTimelines(
         ease: "none",
         onUpdate: onFrameUpdate,
         overwrite: "auto",
+        immediateRender: false,
       },
       0.5,
     );

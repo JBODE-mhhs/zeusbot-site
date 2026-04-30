@@ -95,6 +95,20 @@ export function ScrollEngine() {
         onFrameUpdate: drawFrameFromState,
       });
 
+      // Clamp all paused timelines to time=0 so any residual GSAP internal
+      // state (from immediateRender or prior React StrictMode double-invoke)
+      // is flushed before we play. Belt + suspenders alongside immediateRender:false
+      // on the frame tweens in setupSectionTimelines.
+      heroTl.progress(0);
+      valueTl.progress(0);
+      proofTl.progress(0);
+      ctaTl.progress(0);
+
+      // Explicit frame-1 anchor: guarantee canvas paints f001 before heroTl
+      // animates, regardless of what GSAP construction rendered onto frameState.
+      frameState.idx = 1;
+      drawFrameFromState();
+
       // Hero: play on mount (the page lands at top, hero is in view).
       // No onEnter ScrollTrigger needed for first paint — heroTl.play()
       // here is the native trigger.
@@ -197,11 +211,11 @@ export function ScrollEngine() {
         }}
       />
       {mounted && <FrameCanvas ref={canvasRef} />}
-      {/* Reduced-motion poster — f240 (final frame of 16fps×15s clip). */}
+      {/* Reduced-motion poster — f001 (opening frame; static layout for reduced-motion). */}
       <img
         data-frame-poster
-        src="/frames/f240-720.webp"
-        srcSet="/frames/f240-720.webp 720w, /frames/f240-1080.webp 1080w, /frames/f240.webp 1440w"
+        src="/frames/f001-720.webp"
+        srcSet="/frames/f001-720.webp 720w, /frames/f001-1080.webp 1080w, /frames/f001.webp 1440w"
         sizes="100vw"
         alt=""
         aria-hidden
